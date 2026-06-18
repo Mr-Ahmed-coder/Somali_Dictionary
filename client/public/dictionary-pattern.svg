@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" role="img" aria-label="Abstract dictionary page pattern">
+  <rect width="1400" height="900" fill="#0b3b3c"/>
+  <g opacity="0.18" fill="none" stroke="#f5d18a" stroke-width="2">
+    <path d="M80 120h360v520H80z"/>
+    <path d="M480 120h360v520H480z"/>
+    <path d="M880 120h360v520H880z"/>
+    <path d="M130 190h260M130 250h210M130 310h280M130 370h190"/>
+    <path d="M530 190h260M530 250h210M530 310h280M530 370h190"/>
+    <path d="M930 190h260M930 250h210M930 310h280M930 370h190"/>
+  </g>
+  <g opacity="0.16" fill="#f7faf8">
+    <circle cx="1160" cy="710" r="150"/>
+    <circle cx="200" cy="760" r="90"/>
+  </g>
+</svg>
