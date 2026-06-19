@@ -8,6 +8,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(5000),
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
   FRONTEND_URL: z.string().optional(),
+  JWT_SECRET: z.string().optional(),
   ADMIN_API_KEY: z.string().min(12, "ADMIN_API_KEY must be at least 12 characters"),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),
   RATE_LIMIT_MAX: z.coerce.number().default(200),

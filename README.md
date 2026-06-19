@@ -2,6 +2,18 @@
 
 A production-ready English and Somali dictionary platform built with a Next.js frontend, an Express REST API, and MongoDB Atlas. The app supports public dictionary search, word details, category browsing, admin word management, and CSV/XLSX bulk import.
 
+## Latest Updates
+
+- Added 1000+ English and Somali dictionary words in MongoDB Atlas
+- Added About Us page
+- Added Categories and category browsing pages
+- Added Word Details page
+- Improved homepage UI with a search-focused experience
+- Improved dictionary search with partial matching and suggestions
+- Migrated the database from local MongoDB to MongoDB Atlas
+- Fixed CSV/XLSX import for Google Sheets exports
+- Added General category dataset
+
 ## Features
 
 - English to Somali and Somali to English word lookup
@@ -27,25 +39,25 @@ A production-ready English and Somali dictionary platform built with a Next.js f
 
 ```text
 .
-├── client/                 # Next.js frontend
-│   ├── src/app/            # App Router pages
-│   ├── src/components/     # Search, category, import, and admin UI
-│   ├── src/lib/            # Frontend API clients and config
-│   └── .env.example        # Frontend environment example
-├── server/                 # Express backend
-│   ├── scripts/            # Seed script
-│   ├── src/config/         # Environment and database setup
-│   ├── src/controllers/    # Request handlers
-│   ├── src/middleware/     # Auth, upload, validation, error handling
-│   ├── src/models/         # Mongoose schemas
-│   ├── src/routes/         # REST routes
-│   ├── src/services/       # Business logic
-│   ├── src/validators/     # Zod request validation
-│   ├── server.js           # Render-compatible entrypoint
-│   └── .env.example        # Backend environment example
-├── docs/                   # API and database documentation
-├── render.yaml             # Render backend blueprint
-└── package.json            # Root workspace scripts
+|-- client/                 # Next.js frontend
+|   |-- src/app/            # App Router pages
+|   |-- src/components/     # Search, category, import, and admin UI
+|   |-- src/lib/            # Frontend API clients and config
+|   `-- .env.example        # Frontend environment example
+|-- server/                 # Express backend
+|   |-- scripts/            # Seed script
+|   |-- src/config/         # Environment and database setup
+|   |-- src/controllers/    # Request handlers
+|   |-- src/middleware/     # Auth, upload, validation, error handling
+|   |-- src/models/         # Mongoose schemas
+|   |-- src/routes/         # REST routes
+|   |-- src/services/       # Business logic
+|   |-- src/validators/     # Zod request validation
+|   |-- server.js           # Render-compatible entrypoint
+|   `-- .env.example        # Backend environment example
+|-- docs/                   # API and database documentation
+|-- render.yaml             # Render backend blueprint
+`-- package.json            # Root workspace scripts
 ```
 
 ## Environment Variables
@@ -153,6 +165,7 @@ PORT=5000
 MONGODB_URI=your_mongodb_atlas_uri
 FRONTEND_URL=https://your-vercel-domain.vercel.app
 ADMIN_API_KEY=your_long_secure_admin_key
+JWT_SECRET=your_long_secure_jwt_secret
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX=200
 AI_PROVIDER=disabled
@@ -169,7 +182,7 @@ NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com/api
 
 Then deploy the `client` workspace.
 
-## GitHub Checklist
+## GitHub Safety Checklist
 
 - Real `.env` files are ignored
 - `node_modules`, `.next`, uploads, logs, and local build artifacts are ignored
@@ -178,15 +191,13 @@ Then deploy the `client` workspace.
 - Admin API requests require the configured `x-admin-key`
 - Import uploads use memory storage, so no upload files need to be committed
 
-## Initial Git Commands
+## Release Commands
 
-Run these after reviewing the readiness report:
+Use these commands after reviewing the local changes:
 
 ```bash
-git init
-git add .
-git commit -m "Initial English Somali dictionary platform"
-git branch -M main
-git remote add origin https://github.com/Mr-Ahmed-coder/Somali_Dictionary.git
-git push -u origin main
+git status
+git add README.md server/src/config/env.js
+git commit -m "Prepare dictionary platform release updates"
+git push origin main
 ```
