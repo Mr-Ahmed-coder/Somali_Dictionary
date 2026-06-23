@@ -23,7 +23,6 @@ export function createApp() {
       origin(origin, callback) {
         if (!origin) return callback(null, true);
         if (allowedOrigins.has(origin)) return callback(null, true);
-        if (env.NODE_ENV !== "production" && allowedOrigins.size === 0) return callback(null, true);
         return callback(new Error("Not allowed by CORS"));
       },
       credentials: true

@@ -9,12 +9,13 @@ import {
 import { createWord, deleteWord, putWord, updateWord } from "../controllers/word.controller.js";
 import { requireAdmin } from "../middleware/adminAuth.js";
 import { importUpload } from "../middleware/fileUpload.js";
+import { loginLimiter } from "../middleware/rateLimiters.js";
 import { validateObjectId } from "../middleware/validateObjectId.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
 
-router.post("/login", asyncHandler(login));
+router.post("/login", loginLimiter, asyncHandler(login));
 
 router.use(requireAdmin);
 

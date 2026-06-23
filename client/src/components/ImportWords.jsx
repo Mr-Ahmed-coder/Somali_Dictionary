@@ -31,7 +31,13 @@ export function ImportWords() {
   const validRows = useMemo(() => rows.filter((row) => row.status === "valid"), [rows]);
 
   useEffect(() => {
-    setIsAuthenticated(Boolean(getAdminToken()));
+    const token = getAdminToken();
+    if (!token) {
+      window.location.replace("/admin");
+      return;
+    }
+
+    setIsAuthenticated(true);
     setAuthChecked(true);
   }, []);
 
@@ -50,7 +56,11 @@ export function ImportWords() {
       setSummary(result.summary);
       setMessage({ type: "success", text: "File parsed. Review the rows before saving." });
     } catch (error) {
-      setMessage({ type: "error", text: getErrorMessage(error, "Could not preview the import file.") });
+      const text = getErrorMessage(error, "Could not preview the import file.");
+      setMessage({ type: "error", text });
+      if (text.toLowerCase().includes("auth") || text.toLowerCase().includes("session")) {
+        window.location.replace("/admin");
+      }
     } finally {
       setLoading(false);
     }
@@ -88,7 +98,11 @@ export function ImportWords() {
         window.location.assign("/admin");
       }, 900);
     } catch (error) {
-      setMessage({ type: "error", text: getErrorMessage(error, "Could not save imported words.") });
+      const text = getErrorMessage(error, "Could not save imported words.");
+      setMessage({ type: "error", text });
+      if (text.toLowerCase().includes("auth") || text.toLowerCase().includes("session")) {
+        window.location.replace("/admin");
+      }
     } finally {
       setSaving(false);
     }
@@ -274,3 +288,5 @@ function ImportStatus({ status }) {
     </span>
   );
 }
+
+

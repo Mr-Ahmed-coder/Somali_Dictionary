@@ -22,6 +22,7 @@ import {
   createAdminWord,
   deleteAdminWord,
   getAdminCategories,
+  getAdminProfile,
   getAdminStats,
   getAdminToken,
   getAdminWords,
@@ -58,7 +59,7 @@ const partsOfSpeech = [
 
 export function AdminDashboard() {
   const [authenticated, setAuthenticated] = useState(false);
-  const [apiKey, setApiKey] = useState("");
+  const [credentials, setCredentials] = useState({ email: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -75,12 +76,24 @@ export function AdminDashboard() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
-    const token = getAdminToken();
-    if (!token) {
-      setLoading(false);
-      return;
+    async function validateSession() {
+      const token = getAdminToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        await getAdminProfile();
+        setAuthenticated(true);
+      } catch {
+        clearAdminToken();
+      } finally {
+        setLoading(false);
+      }
     }
-    setAuthenticated(true);
+
+    void validateSession();
   }, []);
 
   useEffect(() => {
@@ -152,7 +165,7 @@ export function AdminDashboard() {
     setBusy(true);
     setLoginError("");
     try {
-      await loginAdmin(apiKey);
+      await loginAdmin(credentials);
       setAuthenticated(true);
     } catch (error) {
       setLoginError(getErrorMessage(error, "Unable to sign in."));
@@ -164,7 +177,7 @@ export function AdminDashboard() {
   function handleLogout() {
     clearAdminToken();
     setAuthenticated(false);
-    setApiKey("");
+    setCredentials({ email: "", password: "" });
     setStats(null);
     setWords([]);
   }
@@ -283,15 +296,25 @@ export function AdminDashboard() {
             <ShieldCheck size={20} />
           </div>
           <h1>Admin Dashboard</h1>
-          <p>Sign in with your admin API key to manage dictionary entries and categories.</p>
+          <p>Sign in with your admin email and password to manage dictionary entries and categories.</p>
           <form onSubmit={handleLogin}>
-            <label htmlFor="admin-key">Admin API key</label>
+            <label htmlFor="admin-email">Admin email</label>
             <input
-              id="admin-key"
+              id="admin-email"
+              type="email"
+              autoComplete="username"
+              value={credentials.email}
+              onChange={(event) => setCredentials((current) => ({ ...current, email: event.target.value }))}
+              placeholder="admin@example.com"
+            />
+            <label htmlFor="admin-password">Admin password</label>
+            <input
+              id="admin-password"
               type="password"
-              value={apiKey}
-              onChange={(event) => setApiKey(event.target.value)}
-              placeholder="Enter admin key"
+              autoComplete="current-password"
+              value={credentials.password}
+              onChange={(event) => setCredentials((current) => ({ ...current, password: event.target.value }))}
+              placeholder="Enter admin password"
             />
             {loginError && <p className="formError">{loginError}</p>}
             <button className="primaryButton" disabled={busy} type="submit">
@@ -695,3 +718,5 @@ function ConfirmDialog({ title, description, busy, onCancel, onConfirm }) {
     </div>
   );
 }
+
+

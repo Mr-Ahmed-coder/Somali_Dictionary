@@ -1,18 +1,25 @@
 import { API_URL } from "./config";
 
-const TOKEN_KEY = "dictionary_admin_key";
+const TOKEN_KEY = "dictionary_admin_token";
 
 export function getAdminToken() {
   if (typeof window === "undefined") return "";
-  return window.localStorage.getItem(TOKEN_KEY) || "";
+  const token = window.sessionStorage.getItem(TOKEN_KEY) || "";
+
+  if (token && isTokenExpired(token)) {
+    clearAdminToken();
+    return "";
+  }
+
+  return token;
 }
 
 export function setAdminToken(token) {
-  window.localStorage.setItem(TOKEN_KEY, token);
+  window.sessionStorage.setItem(TOKEN_KEY, token);
 }
 
 export function clearAdminToken() {
-  window.localStorage.removeItem(TOKEN_KEY);
+  window.sessionStorage.removeItem(TOKEN_KEY);
 }
 
 export async function adminFetch(path, options = {}) {
@@ -22,13 +29,16 @@ export async function adminFetch(path, options = {}) {
     ...options,
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(token ? { "x-admin-key": token } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     },
     cache: "no-store"
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearAdminToken();
+    }
     const errorBody = await response.json().catch(() => ({}));
     throw new Error(errorBody.message || `Request failed with ${response.status}`);
   }
@@ -37,11 +47,11 @@ export async function adminFetch(path, options = {}) {
   return response.json();
 }
 
-export async function loginAdmin(apiKey) {
+export async function loginAdmin({ email, password }) {
   const result = await fetch(`${API_URL}/admin/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ apiKey })
+    body: JSON.stringify({ email, password })
   });
 
   if (!result.ok) {
@@ -52,6 +62,10 @@ export async function loginAdmin(apiKey) {
   const data = await result.json();
   setAdminToken(data.token);
   return data;
+}
+
+export function getAdminProfile() {
+  return adminFetch("/admin/me");
 }
 
 export function getAdminStats() {
@@ -147,4 +161,22 @@ export function commitWordImport(rows) {
     method: "POST",
     body: JSON.stringify({ rows })
   });
+}
+
+function isTokenExpired(token) {
+  const payload = decodeTokenPayload(token);
+  if (!payload?.exp) return true;
+  return payload.exp * 1000 <= Date.now();
+}
+
+function decodeTokenPayload(token) {
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = window.atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
 }

@@ -9,12 +9,11 @@ import {
   searchWords,
   updateWordById
 } from "../services/word.service.js";
-import { env } from "../config/env.js";
 import { searchSchema, suggestionSchema, wordCreateSchema, wordListSchema, wordUpdateSchema } from "../validators/word.schema.js";
 
 export async function getWords(req, res) {
   const query = wordListSchema.parse(req.query);
-  const isAdminRequest = req.header("x-admin-key") === env.ADMIN_API_KEY;
+  const isAdminRequest = req.admin?.role === "admin";
 
   if (!isAdminRequest) {
     query.status = "published";
@@ -32,14 +31,14 @@ export async function getWords(req, res) {
 
 export async function search(req, res) {
   const query = searchSchema.parse(req.query);
-  const isAdminRequest = req.header("x-admin-key") === env.ADMIN_API_KEY;
+  const isAdminRequest = req.admin?.role === "admin";
   const result = await searchWords({ ...query, includeDrafts: isAdminRequest });
   res.json(result);
 }
 
 export async function suggestions(req, res) {
   const query = suggestionSchema.parse(req.query);
-  const isAdminRequest = req.header("x-admin-key") === env.ADMIN_API_KEY;
+  const isAdminRequest = req.admin?.role === "admin";
   const result = await getWordSuggestions({ ...query, includeDrafts: isAdminRequest });
   res.json(result);
 }
