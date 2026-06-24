@@ -214,6 +214,11 @@ NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com/api
 ```
 
 Then deploy the `client` workspace.
+Deployment notes:
+
+- `FRONTEND_URL` must be the exact Vercel frontend origin, for example `https://your-app.vercel.app`.
+- `NEXT_PUBLIC_API_URL` must be the Render backend API base URL ending in `/api`, for example `https://your-backend.onrender.com/api`.
+- Do not use localhost in Vercel or Render production environment variables.
 
 ## GitHub Safety Checklist
 

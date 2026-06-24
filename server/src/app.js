@@ -22,7 +22,8 @@ export function createApp() {
     cors({
       origin(origin, callback) {
         if (!origin) return callback(null, true);
-        if (allowedOrigins.has(origin)) return callback(null, true);
+        const requestOrigin = origin.replace(/\/+$/, "");
+        if (allowedOrigins.has(requestOrigin)) return callback(null, true);
         return callback(new Error("Not allowed by CORS"));
       },
       credentials: true

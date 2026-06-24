@@ -30,6 +30,10 @@ export const env = {
 function parseOrigins(value = "") {
   return value
     .split(",")
-    .map((origin) => origin.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
+}
+
+function normalizeOrigin(origin = "") {
+  return origin.trim().replace(/\/+$/, "");
 }
