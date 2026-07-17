@@ -7,7 +7,7 @@ async function bootstrap() {
 
   const app = createApp();
   app.listen(env.PORT, () => {
-    console.info(`Dictionary API running on port ${env.PORT}`);
+    console.info(`Server running on port ${env.PORT}`);
   });
 }
 

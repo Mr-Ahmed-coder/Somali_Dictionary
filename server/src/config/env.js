@@ -7,6 +7,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(5000),
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
+  MONGODB_DNS_SERVERS: z.string().optional(),
   FRONTEND_URL: z.string().min(1, "FRONTEND_URL is required"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   JWT_EXPIRES_IN: z.string().default("8h"),
@@ -24,13 +25,18 @@ const parsedEnv = envSchema.parse(process.env);
 
 export const env = {
   ...parsedEnv,
+  MONGODB_DNS_SERVERS: parseList(parsedEnv.MONGODB_DNS_SERVERS),
   CORS_ORIGINS: parseOrigins(parsedEnv.FRONTEND_URL)
 };
 
 function parseOrigins(value = "") {
+  return parseList(value).map(normalizeOrigin).filter(Boolean);
+}
+
+function parseList(value = "") {
   return value
     .split(",")
-    .map(normalizeOrigin)
+    .map((item) => item.trim())
     .filter(Boolean);
 }
 

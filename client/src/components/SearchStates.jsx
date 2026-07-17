@@ -1,4 +1,4 @@
-import { AlertCircle, Loader2, SearchX } from "lucide-react";
+import { AlertCircle, BookOpen, Loader2 } from "lucide-react";
 
 export function SearchLoadingState() {
   return (
@@ -10,12 +10,14 @@ export function SearchLoadingState() {
   );
 }
 
-export function SearchEmptyState({ query }) {
+export function SearchEmptyState() {
   return (
-    <div className="searchState">
-      <SearchX size={26} />
-      <strong>No results found</strong>
-      <span>No dictionary entries matched "{query}".</span>
+    <div className="searchState emptySearchState" role="status" aria-live="polite">
+      <span className="emptySearchIcon" aria-hidden="true">
+        <BookOpen size={30} />
+      </span>
+      <strong>Ereygan lama helin.</strong>
+      <span>Dhawaan ayaan ku soo dari doonnaa.</span>
     </div>
   );
 }

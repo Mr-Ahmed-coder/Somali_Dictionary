@@ -164,7 +164,12 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
           {status === "loading" && <HomeSearchState icon={<Loader2 className="spin" size={22} />} title="Searching dictionary" />}
           {status === "error" && <HomeSearchState title="Search unavailable" description={error} />}
           {status === "success" && items.length === 0 && (
-            <HomeSearchState title="No results found" description={`No English or Somali entries matched "${query}".`} />
+            <HomeSearchState
+              empty
+              icon={<BookOpen size={24} />}
+              title="Ereygan lama helin."
+              description="Dhawaan ayaan ku soo dari doonnaa."
+            />
           )}
           {items.map((item) => (
             <HomeResultCard word={item} key={item._id} />
@@ -200,7 +205,7 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
       <div className={compact ? "compactResults" : "searchResultsGrid"}>
         {status === "loading" && <SearchLoadingState />}
         {status === "error" && <SearchErrorState message={error} />}
-        {status === "success" && items.length === 0 && <SearchEmptyState query={query} />}
+        {status === "success" && items.length === 0 && <SearchEmptyState />}
         {items.map((item) =>
           compact ? (
             <Link
@@ -342,11 +347,18 @@ function HomeResultCard({ word }) {
   );
 }
 
-function HomeSearchState({ icon = null, title, description }) {
+function HomeSearchState({ empty = false, icon = null, title, description }) {
+  const stateClass = empty
+    ? "grid min-h-44 place-items-center rounded-3xl border border-[#cfe2dc] bg-[#f4fbf8] p-6 text-center text-muted shadow-sm"
+    : "grid min-h-32 place-items-center rounded-3xl border border-dashed border-[#cfddd8] bg-white/70 p-6 text-center text-muted";
+  const iconClass = empty
+    ? "grid size-14 place-items-center rounded-2xl bg-white text-ocean shadow-sm ring-1 ring-[#dce8e3]"
+    : "";
+
   return (
-    <div className="grid min-h-32 place-items-center rounded-3xl border border-dashed border-[#cfddd8] bg-white/70 p-6 text-center text-muted">
-      <div className="grid place-items-center gap-2">
-        {icon}
+    <div className={stateClass}>
+      <div className="grid max-w-md place-items-center gap-3">
+        {icon && <span className={iconClass}>{icon}</span>}
         <strong className="text-base font-black text-ink">{title}</strong>
         {description && <p className="m-0 max-w-xl text-sm font-semibold leading-6">{description}</p>}
       </div>

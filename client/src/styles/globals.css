@@ -498,9 +498,45 @@ button {
   text-align: center;
 }
 
+.emptySearchState {
+  min-height: clamp(220px, 32vw, 300px);
+  align-content: center;
+  gap: 12px;
+  border: 1px solid #cfe2dc;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 251, 248, 0.98)),
+    #f4fbf8;
+  box-shadow: 0 14px 36px rgba(18, 55, 49, 0.08);
+}
+
+.emptySearchIcon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid #dce8e3;
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--accent);
+  box-shadow: 0 10px 24px rgba(15, 139, 141, 0.12);
+}
+
 .searchState strong {
   color: var(--ink);
   font-size: 20px;
+}
+
+.emptySearchState strong {
+  font-size: clamp(21px, 4vw, 28px);
+  line-height: 1.25;
+}
+
+.emptySearchState span:not(.emptySearchIcon) {
+  max-width: 34rem;
+  color: var(--muted);
+  font-size: clamp(15px, 2.4vw, 18px);
+  font-weight: 700;
+  line-height: 1.65;
 }
 
 .searchState svg {
