@@ -221,6 +221,7 @@ wordSchema.index({ normalizedSomali: 1, status: 1, "sync.isDeleted": 1 });
 wordSchema.index({ searchKeywords: 1, status: 1, "sync.isDeleted": 1 });
 wordSchema.index({ partOfSpeech: 1, normalizedEnglish: 1, status: 1 });
 wordSchema.index({ category: 1, partOfSpeech: 1, status: 1 });
+wordSchema.index({ letter: 1, normalizedEnglish: 1, status: 1, "sync.isDeleted": 1 });
 wordSchema.index({ "popularity.score": -1, status: 1 });
 wordSchema.index({ updatedAt: -1, "sync.version": 1 });
 wordSchema.index({ normalizedEnglish: 1, normalizedSomali: 1, partOfSpeech: 1 }, { unique: true });

@@ -54,13 +54,39 @@ export async function me(req, res) {
 }
 
 export async function getStats(_req, res) {
-  const [totalWords, publishedWords, draftWords, archivedWords, categoryCount, latestWords, popularWords] =
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [
+    totalWords,
+    publishedWords,
+    draftWords,
+    archivedWords,
+    categoryCount,
+    recentlyAddedToday,
+    wordTypes,
+    alphabetCounts,
+    categoryCounts,
+    latestWords,
+    popularWords
+  ] =
     await Promise.all([
       Word.countDocuments({ "sync.isDeleted": false }),
       Word.countDocuments({ status: "published", "sync.isDeleted": false }),
       Word.countDocuments({ status: "draft", "sync.isDeleted": false }),
       Word.countDocuments({ $or: [{ status: "archived" }, { "sync.isDeleted": true }] }),
       Category.countDocuments({ isActive: true }),
+      Word.countDocuments({ createdAt: { $gte: today }, "sync.isDeleted": false }),
+      Word.distinct("partOfSpeech", { "sync.isDeleted": false }),
+      Word.aggregate([
+        { $match: { "sync.isDeleted": false, letter: { $ne: "" } } },
+        { $group: { _id: "$letter", count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]),
+      Word.aggregate([
+        { $match: { "sync.isDeleted": false, category: { $ne: null } } },
+        { $group: { _id: "$category", count: { $sum: 1 } } }
+      ]),
       Word.find({ "sync.isDeleted": false }).sort({ createdAt: -1 }).limit(5).select("englishWord somaliWord createdAt"),
       Word.find({ status: "published", "sync.isDeleted": false })
         .sort({ "popularity.score": -1, "popularity.searchCount": -1 })
@@ -74,8 +100,13 @@ export async function getStats(_req, res) {
       published: publishedWords,
       drafts: draftWords,
       archived: archivedWords,
-      categories: categoryCount
+      categories: categoryCount,
+      wordTypes: wordTypes.length,
+      recentlyAddedToday,
+      alphabetGroups: alphabetCounts.length
     },
+    alphabetCounts: alphabetCounts.map((item) => ({ letter: item._id, count: item.count })),
+    categoryCounts: categoryCounts.map((item) => ({ category: item._id, count: item.count })),
     latestWords,
     popularWords
   });

@@ -76,7 +76,16 @@ export function getAdminCategories() {
   return adminFetch("/categories");
 }
 
-export function getAdminWords({ page, limit, q, category = "all", partOfSpeech = "all", status = "all" }) {
+export function getAdminWords({
+  page,
+  limit,
+  q,
+  category = "all",
+  partOfSpeech = "all",
+  status = "all",
+  letter = "all",
+  sort = "newest"
+}) {
   if (q?.trim()) {
     const params = new URLSearchParams({
       q: q.trim(),
@@ -88,6 +97,7 @@ export function getAdminWords({ page, limit, q, category = "all", partOfSpeech =
 
     if (category !== "all") params.set("category", category);
     if (partOfSpeech !== "all") params.set("partOfSpeech", partOfSpeech);
+    if (letter !== "all") params.set("letter", letter);
 
     return adminFetch(`/words/search?${params.toString()}`).then(normalizeWordsResponse);
   }
@@ -96,11 +106,12 @@ export function getAdminWords({ page, limit, q, category = "all", partOfSpeech =
     page: String(page),
     limit: String(limit),
     status,
-    sort: "newest"
+    sort
   });
 
   if (category !== "all") params.set("category", category);
   if (partOfSpeech !== "all") params.set("partOfSpeech", partOfSpeech);
+  if (letter !== "all") params.set("letter", letter);
 
   return adminFetch(`/words?${params.toString()}`).then(normalizeWordsResponse);
 }

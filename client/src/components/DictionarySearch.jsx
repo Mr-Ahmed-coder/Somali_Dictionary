@@ -103,7 +103,7 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
     return (
       <section className="mx-auto w-full max-w-4xl">
         <form
-          className="rounded-[2rem] bg-white/95 p-3 shadow-search ring-1 ring-black/5 backdrop-blur sm:p-4"
+          className="rounded-[2rem] bg-white/95 p-2.5 shadow-[0_30px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/30 backdrop-blur-xl transition duration-300 focus-within:-translate-y-0.5 focus-within:bg-white sm:p-3"
           onSubmit={onSubmit}
         >
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -113,17 +113,17 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
                 size={22}
               />
               <input
-                className="min-h-16 rounded-[1.45rem] border-0 bg-[#f6fbf9] pl-14 pr-5 text-lg font-bold text-ink outline-none ring-1 ring-[#dce8e3] transition placeholder:text-[#8a9993] focus:bg-white focus:ring-2 focus:ring-ocean sm:min-h-[4.75rem] sm:text-xl"
+                className="min-h-16 rounded-[1.45rem] border-0 bg-[#f6fbf9] pl-14 pr-5 text-lg font-bold text-ink outline-none ring-1 ring-[#dce8e3] transition duration-300 placeholder:text-[#8a9993] focus:bg-white focus:ring-2 focus:ring-ocean sm:min-h-20 sm:text-xl"
                 value={query}
                 onChange={(event) => handleQueryChange(event.target.value)}
                 onFocus={() => setShowSuggestions(Boolean(query.trim()))}
                 placeholder="Search English or Somali words"
                 autoComplete="off"
-                aria-label="Search English or Somali words"
+                aria-label="Search English or Somali dictionary words"
               />
             </div>
             <button
-              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[1.35rem] bg-forest px-7 text-base font-black text-white shadow-lg shadow-forest/20 transition hover:bg-ocean disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-[4.75rem]"
+              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[1.35rem] bg-forest px-7 text-base font-black text-white shadow-lg shadow-forest/30 transition duration-300 hover:bg-ocean disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-20"
               disabled={status === "loading" || !query.trim()}
               type="submit"
             >

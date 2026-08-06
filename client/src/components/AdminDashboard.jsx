@@ -1,20 +1,22 @@
 "use client";
 
 import {
-  BarChart3,
   BookOpen,
-  Edit3,
   FolderTree,
   Loader2,
   LogOut,
   Plus,
-  RefreshCw,
-  Search,
   ShieldCheck,
   Trash2,
   X
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { AlphabetFilter } from "@/components/admin/AlphabetFilter";
+import { CategorySidebar } from "@/components/admin/CategorySidebar";
+import { DashboardStats } from "@/components/admin/DashboardStats";
+import { FilterBar } from "@/components/admin/FilterBar";
+import { Pagination } from "@/components/admin/Pagination";
+import { WordTable } from "@/components/admin/WordTable";
 import { getErrorMessage } from "@/lib/errorMessage";
 import {
   clearAdminToken,
@@ -57,19 +59,28 @@ const partsOfSpeech = [
   "other"
 ];
 
+const initialFilters = {
+  category: "all",
+  partOfSpeech: "all",
+  status: "all",
+  letter: "all",
+  sort: "newest"
+};
+
 export function AdminDashboard() {
   const [authenticated, setAuthenticated] = useState(false);
   const [credentials, setCredentials] = useState({ email: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [wordsLoading, setWordsLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
   const [stats, setStats] = useState(null);
   const [categories, setCategories] = useState([]);
   const [words, setWords] = useState([]);
-  const [pagination, setPagination] = useState({ page: 1, limit: 8, total: 0, pages: 1 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, pages: 1 });
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState({ category: "all", partOfSpeech: "all", status: "all" });
+  const [filters, setFilters] = useState(initialFilters);
   const [editingWord, setEditingWord] = useState(null);
   const [form, setForm] = useState(initialForm);
   const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
@@ -98,65 +109,87 @@ export function AdminDashboard() {
 
   useEffect(() => {
     if (!authenticated) return;
-    void hydrateDashboard();
-  }, [authenticated]);
 
-  const categoryOptions = useMemo(() => categories || [], [categories]);
-
-  async function hydrateDashboard() {
     const importNotice = window.localStorage.getItem("dictionary_import_success");
-    const defaultFilters = { category: "all", partOfSpeech: "all", status: "all" };
-
     if (importNotice) {
-      setFilters(defaultFilters);
       setQuery("");
-    }
-
-    await loadDashboard(1, importNotice ? "" : query, importNotice ? defaultFilters : filters);
-
-    if (importNotice) {
-      window.localStorage.removeItem("dictionary_import_success");
-      const parsed = safeParseImportNotice(importNotice);
+      setFilters(initialFilters);
       setMessage({
         type: "success",
-        text: `Import complete. ${parsed.importedRows || 0} new words are shown first.`
+        text: `Import complete. ${safeParseImportNotice(importNotice).importedRows || 0} new words are shown first.`
       });
+      window.localStorage.removeItem("dictionary_import_success");
     }
-  }
 
-  async function loadDashboard(page = pagination.page, searchTerm = query, nextFilters = filters) {
+    void loadMeta();
+  }, [authenticated]);
+
+  useEffect(() => {
+    if (!authenticated) return;
+
+    const timeout = window.setTimeout(() => {
+      void loadWords(pagination.page, query, filters);
+    }, query.trim() ? 250 : 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [authenticated, filters, pagination.page, query]);
+
+  const categoryOptions = useMemo(() => {
+    const countByCategory = new Map((stats?.categoryCounts || []).map((item) => [String(item.category), item.count]));
+    return categories.map((category) => ({
+      ...category,
+      adminWordCount: category.virtual ? 0 : countByCategory.get(String(category._id)) ?? category.wordCount ?? 0
+    }));
+  }, [categories, stats]);
+
+  async function loadMeta() {
     setLoading(true);
-    setMessage(null);
     try {
-      const [statsResult, categoriesResult, wordsResult] = await Promise.all([
-        getAdminStats(),
-        getAdminCategories(),
-        getAdminWords({ page, limit: pagination.limit, q: searchTerm, ...nextFilters })
-      ]);
-
+      const [statsResult, categoriesResult] = await Promise.all([getAdminStats(), getAdminCategories()]);
       setStats(statsResult);
       setCategories(categoriesResult.items || []);
-      setWords(wordsResult.items || []);
-      setPagination(
-        wordsResult.pagination || {
-          page,
-          limit: pagination.limit,
-          total: wordsResult.items?.length || 0,
-          pages: 1
-        }
-      );
 
       if (!form.category && categoriesResult.items?.[0]?._id) {
         setForm((current) => ({ ...current, category: categoriesResult.items[0]._id }));
       }
     } catch (error) {
-      const text = getErrorMessage(error, "Could not load the admin dashboard.");
-      setMessage({ type: "error", text });
-      if (text.toLowerCase().includes("admin")) {
-        handleLogout();
-      }
+      handleAdminError(error, "Could not load dashboard summary.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadWords(page = 1, searchTerm = query, nextFilters = filters) {
+    setWordsLoading(true);
+    try {
+      const wordsResult = await getAdminWords({
+        page,
+        limit: 25,
+        q: searchTerm,
+        ...nextFilters
+      });
+
+      setWords(wordsResult.items || []);
+      setPagination(
+        wordsResult.pagination || {
+          page,
+          limit: 25,
+          total: wordsResult.items?.length || 0,
+          pages: 1
+        }
+      );
+    } catch (error) {
+      handleAdminError(error, "Could not load words.");
+    } finally {
+      setWordsLoading(false);
+    }
+  }
+
+  function handleAdminError(error, fallback) {
+    const text = getErrorMessage(error, fallback);
+    setMessage({ type: "error", text });
+    if (text.toLowerCase().includes("admin") || text.toLowerCase().includes("401")) {
+      handleLogout();
     }
   }
 
@@ -180,6 +213,28 @@ export function AdminDashboard() {
     setCredentials({ email: "", password: "" });
     setStats(null);
     setWords([]);
+  }
+
+  function updateQuery(value) {
+    setQuery(value);
+    setPagination((current) => ({ ...current, page: 1 }));
+  }
+
+  function handleFilterChange(field, value) {
+    setFilters((current) => ({ ...current, [field]: value }));
+    setPagination((current) => ({ ...current, page: 1 }));
+  }
+
+  function handleCategorySelect(category) {
+    handleFilterChange("category", category);
+  }
+
+  function handleLetterSelect(letter) {
+    handleFilterChange("letter", letter);
+  }
+
+  async function refreshDashboard() {
+    await Promise.all([loadMeta(), loadWords(1, query, filters)]);
   }
 
   function startEdit(word) {
@@ -226,14 +281,13 @@ export function AdminDashboard() {
     try {
       if (editingWord?._id) {
         await updateAdminWord(editingWord._id, buildPayload());
-        await loadDashboard(1);
         setMessage({ type: "success", text: "Word updated successfully." });
       } else {
         await createAdminWord(buildPayload());
-        await loadDashboard(1);
         setMessage({ type: "success", text: "Word created successfully." });
       }
       resetForm();
+      await refreshDashboard();
     } catch (error) {
       setMessage({ type: "error", text: getErrorMessage(error, "Could not save the word.") });
     } finally {
@@ -248,7 +302,7 @@ export function AdminDashboard() {
     try {
       await deleteAdminWord(deleteTarget._id);
       setDeleteTarget(null);
-      await loadDashboard(pagination.page);
+      await refreshDashboard();
       setMessage({ type: "success", text: "Word deleted successfully." });
     } catch (error) {
       setMessage({ type: "error", text: getErrorMessage(error, "Could not delete the word.") });
@@ -264,28 +318,13 @@ export function AdminDashboard() {
     try {
       await createAdminCategory(categoryForm);
       setCategoryForm({ name: "", description: "" });
-      await loadDashboard(pagination.page);
+      await loadMeta();
       setMessage({ type: "success", text: "Category created successfully." });
     } catch (error) {
       setMessage({ type: "error", text: getErrorMessage(error, "Could not create the category.") });
     } finally {
       setBusy(false);
     }
-  }
-
-  async function handleSearch(event) {
-    event.preventDefault();
-    await loadDashboard(1, query);
-  }
-
-  async function handleFilterChange(field, value) {
-    const nextFilters = { ...filters, [field]: value };
-    setFilters(nextFilters);
-    await loadDashboard(1, query, nextFilters);
-  }
-
-  async function refreshWords() {
-    await loadDashboard(1, query, filters);
   }
 
   if (!authenticated) {
@@ -327,6 +366,11 @@ export function AdminDashboard() {
     );
   }
 
+  const emptyMessage =
+    filters.category !== "all" || filters.letter !== "all"
+      ? "No words available in this category."
+      : "No words match the current filters.";
+
   return (
     <main className="adminShell">
       <aside className="adminSidebar">
@@ -336,6 +380,7 @@ export function AdminDashboard() {
         </a>
         <nav>
           <a href="#overview">Overview</a>
+          <a href="#alphabet">Alphabet</a>
           <a href="#words">Words</a>
           <a href="#editor">Editor</a>
           <a href="/admin/import">Import</a>
@@ -349,8 +394,8 @@ export function AdminDashboard() {
       <section className="adminMain">
         <header className="adminTopbar" id="overview">
           <div>
-            <p className="eyebrow">English ↔ Somali</p>
-            <h1>Admin Dashboard</h1>
+            <p className="eyebrow">English &lt;-&gt; Somali</p>
+            <h1>Dictionary Management System</h1>
           </div>
           <button className="primaryButton" onClick={resetForm} type="button">
             <Plus size={18} />
@@ -367,140 +412,49 @@ export function AdminDashboard() {
           </div>
         )}
 
-        <section className="metricGrid">
-          <Metric icon={<BookOpen />} label="Total words" value={stats?.totals?.words ?? 0} />
-          <Metric icon={<ShieldCheck />} label="Published" value={stats?.totals?.published ?? 0} />
-          <Metric icon={<Edit3 />} label="Drafts" value={stats?.totals?.drafts ?? 0} />
-          <Metric icon={<FolderTree />} label="Categories" value={stats?.totals?.categories ?? 0} />
-        </section>
+        <DashboardStats totals={stats?.totals} />
+        <AlphabetFilter selectedLetter={filters.letter} counts={stats?.alphabetCounts || []} onSelect={handleLetterSelect} />
 
-        <section className="dashboardGrid">
-          <div className="adminSurface" id="words">
+        <section className="adminManagementGrid">
+          <CategorySidebar categories={categoryOptions} selectedCategory={filters.category} onSelect={handleCategorySelect} />
+
+          <div className="adminSurface wordManagementSurface" id="words">
             <div className="surfaceHeader">
               <div>
                 <h2>Dictionary Words</h2>
-                <p>Search, edit, and delete English ↔ Somali entries.</p>
+                <p>Manage 25 entries per page with server-side filtering and sorting.</p>
               </div>
-              <form className="adminSearch" onSubmit={handleSearch}>
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search words"
-                  aria-label="Search words"
-                />
-                <button aria-label="Search" type="submit">
-                  <Search size={18} />
-                </button>
-              </form>
+              <span className="resultCount">{pagination.total || 0} words</span>
             </div>
 
-            <div className="wordToolbar">
-              <span>{pagination.total || words.length} words found</span>
-              <button className="ghostButton" disabled={loading} onClick={refreshWords} type="button">
-                <RefreshCw className={loading ? "spin" : ""} size={18} />
-                Refresh
-              </button>
-            </div>
+            <FilterBar
+              query={query}
+              filters={filters}
+              categories={categoryOptions}
+              partsOfSpeech={partsOfSpeech}
+              loading={wordsLoading}
+              onQueryChange={updateQuery}
+              onFilterChange={handleFilterChange}
+              onRefresh={refreshDashboard}
+            />
 
-            <div className="adminFilters">
-              <label>
-                <span>Category</span>
-                <select value={filters.category} onChange={(event) => handleFilterChange("category", event.target.value)}>
-                  <option value="all">All categories</option>
-                  {categoryOptions.map((category) => (
-                    <option value={category._id} key={category._id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Part of speech</span>
-                <select
-                  value={filters.partOfSpeech}
-                  onChange={(event) => handleFilterChange("partOfSpeech", event.target.value)}
-                >
-                  <option value="all">All parts</option>
-                  {partsOfSpeech.map((part) => (
-                    <option value={part} key={part}>
-                      {part}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Status</span>
-                <select value={filters.status} onChange={(event) => handleFilterChange("status", event.target.value)}>
-                  <option value="all">All statuses</option>
-                  <option value="published">Published</option>
-                  <option value="draft">Draft</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </label>
-            </div>
+            <WordTable
+              words={words}
+              loading={loading || wordsLoading}
+              emptyMessage={emptyMessage}
+              onEdit={startEdit}
+              onDelete={setDeleteTarget}
+            />
 
-            <div className="wordTable">
-              <div className="tableHead">
-                <span>English</span>
-                <span>Somali</span>
-                <span>Category</span>
-                <span>Status</span>
-                <span>Actions</span>
-              </div>
-              {loading ? (
-                <div className="emptyState">
-                  <Loader2 className="spin" />
-                  Loading dashboard
-                </div>
-              ) : (
-                words.map((word) => (
-                  <article className="tableRow" key={word._id}>
-                    <span>
-                      <strong>{word.englishWord || word.english}</strong>
-                      <small>{word.partOfSpeech}</small>
-                    </span>
-                    <span>{word.somaliWord || word.somali}</span>
-                    <span>{word.category?.name || "Uncategorized"}</span>
-                    <span>
-                      <small className={`statusPill status-${word.status || "published"}`}>{word.status || "published"}</small>
-                    </span>
-                    <span className="rowActions">
-                      <button aria-label="Edit word" onClick={() => startEdit(word)} type="button">
-                        <Edit3 size={16} />
-                      </button>
-                      <button aria-label="Delete word" onClick={() => setDeleteTarget(word)} type="button">
-                        <Trash2 size={16} />
-                      </button>
-                    </span>
-                  </article>
-                ))
-              )}
-              {!loading && words.length === 0 && <div className="emptyState">No words found.</div>}
-            </div>
-
-            <div className="paginationBar">
-              <button
-                className="ghostButton"
-                disabled={pagination.page <= 1 || loading}
-                onClick={() => loadDashboard(pagination.page - 1, query, filters)}
-                type="button"
-              >
-                Previous
-              </button>
-              <span>
-                Page {pagination.page} of {pagination.pages || 1}
-              </span>
-              <button
-                className="ghostButton"
-                disabled={pagination.page >= pagination.pages || loading}
-                onClick={() => loadDashboard(pagination.page + 1, query, filters)}
-                type="button"
-              >
-                Next
-              </button>
-            </div>
+            <Pagination
+              pagination={pagination}
+              loading={wordsLoading}
+              onPageChange={(nextPage) => setPagination((current) => ({ ...current, page: nextPage }))}
+            />
           </div>
+        </section>
 
+        <section className="dashboardGrid">
           <form className="adminSurface editorSurface" id="editor" onSubmit={handleSubmit}>
             <div className="surfaceHeader">
               <div>
@@ -513,7 +467,7 @@ export function AdminDashboard() {
               <Field label="English word" value={form.englishWord} onChange={(value) => updateForm("englishWord", value)} />
               <Field label="Somali word" value={form.somaliWord} onChange={(value) => updateForm("somaliWord", value)} />
               <SelectField
-                label="Part of speech"
+                label="Type"
                 value={form.partOfSpeech}
                 options={partsOfSpeech}
                 onChange={(value) => updateForm("partOfSpeech", value)}
@@ -570,47 +524,33 @@ export function AdminDashboard() {
               </button>
             </div>
           </form>
-        </section>
 
-        <section className="adminSurface insightSurface">
-          <div className="surfaceHeader">
-            <div>
-              <h2>Categories and Insights</h2>
-              <p>Manage word categories and review editorial activity.</p>
-            </div>
-            <BarChart3 />
-          </div>
-          <div className="insightGrid threeColumn">
-            <div className="categoryManager">
-              <h3>Word categories</h3>
-              <form onSubmit={handleCreateCategory}>
-                <input
-                  value={categoryForm.name}
-                  onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Category name"
-                  required
-                />
-                <input
-                  value={categoryForm.description}
-                  onChange={(event) =>
-                    setCategoryForm((current) => ({ ...current, description: event.target.value }))
-                  }
-                  placeholder="Description"
-                />
-                <button className="primaryButton" disabled={busy} type="submit">
-                  <Plus size={18} />
-                  Add category
-                </button>
-              </form>
-              <div className="categoryChips">
-                {categoryOptions.map((category) => (
-                  <span key={category._id}>{category.name}</span>
-                ))}
+          <section className="adminSurface categoryManager">
+            <div className="surfaceHeader">
+              <div>
+                <h2>Category Tools</h2>
+                <p>Create category groups used by imports and word records.</p>
               </div>
+              <FolderTree />
             </div>
-            <InsightList title="Latest words" items={stats?.latestWords || []} />
-            <InsightList title="Popular words" items={stats?.popularWords || []} />
-          </div>
+            <form onSubmit={handleCreateCategory}>
+              <input
+                value={categoryForm.name}
+                onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Category name"
+                required
+              />
+              <input
+                value={categoryForm.description}
+                onChange={(event) => setCategoryForm((current) => ({ ...current, description: event.target.value }))}
+                placeholder="Description"
+              />
+              <button className="primaryButton" disabled={busy} type="submit">
+                <Plus size={18} />
+                Add category
+              </button>
+            </form>
+          </section>
         </section>
       </section>
 
@@ -633,16 +573,6 @@ function safeParseImportNotice(value) {
   } catch {
     return { importedRows: 0 };
   }
-}
-
-function Metric({ icon, label, value }) {
-  return (
-    <article className="metricCard">
-      {icon}
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </article>
-  );
 }
 
 function Field({ label, value, onChange, placeholder = "" }) {
@@ -684,21 +614,6 @@ function SelectField({ label, value, options, onChange }) {
   );
 }
 
-function InsightList({ title, items }) {
-  return (
-    <div className="insightList">
-      <h3>{title}</h3>
-      {items.length === 0 && <p>No entries yet.</p>}
-      {items.map((item) => (
-        <div key={item._id}>
-          <strong>{item.englishWord}</strong>
-          <span>{item.somaliWord}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function ConfirmDialog({ title, description, busy, onCancel, onConfirm }) {
   return (
     <div className="confirmOverlay" role="presentation">
@@ -718,5 +633,3 @@ function ConfirmDialog({ title, description, busy, onCancel, onConfirm }) {
     </div>
   );
 }
-
-

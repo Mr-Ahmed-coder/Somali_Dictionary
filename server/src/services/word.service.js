@@ -9,12 +9,23 @@ const directionFields = {
 
 const sortStrategies = {
   alphabetical: { normalizedEnglish: 1 },
+  "english-asc": { normalizedEnglish: 1 },
+  "english-desc": { normalizedEnglish: -1 },
   popular: { "popularity.score": -1, normalizedEnglish: 1 },
   newest: { createdAt: -1 },
+  oldest: { createdAt: 1 },
   updated: { updatedAt: -1, createdAt: -1 }
 };
 
-export async function listWords({ page = 1, limit = 24, category, status = "published", partOfSpeech, sort = "newest" }) {
+export async function listWords({
+  page = 1,
+  limit = 24,
+  category,
+  status = "published",
+  partOfSpeech,
+  letter,
+  sort = "newest"
+}) {
   const query = { "sync.isDeleted": false };
 
   if (status !== "all") {
@@ -27,6 +38,10 @@ export async function listWords({ page = 1, limit = 24, category, status = "publ
 
   if (partOfSpeech) {
     query.partOfSpeech = partOfSpeech;
+  }
+
+  if (letter) {
+    query.letter = normalizeText(letter).charAt(0);
   }
 
   const skip = (Number(page) - 1) * Number(limit);
@@ -59,7 +74,8 @@ export async function searchWords({
   includeDrafts = false,
   category,
   status = "published",
-  partOfSpeech
+  partOfSpeech,
+  letter
 }) {
   const normalized = normalizeText(q);
   const categoryIds = await findMatchingCategoryIds(normalized);
@@ -77,6 +93,10 @@ export async function searchWords({
 
   if (partOfSpeech) {
     baseQuery.partOfSpeech = partOfSpeech;
+  }
+
+  if (letter) {
+    baseQuery.letter = normalizeText(letter).charAt(0);
   }
 
   const query = buildSearchQuery({ baseQuery, field, normalized, categoryIds, matchingPartsOfSpeech });

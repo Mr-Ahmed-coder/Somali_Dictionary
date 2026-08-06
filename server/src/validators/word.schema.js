@@ -59,7 +59,8 @@ export const searchSchema = z.object({
   limit: z.coerce.number().min(1).max(50).default(20),
   category: objectIdSchema.optional(),
   status: z.enum(["draft", "published", "archived", "all"]).default("published"),
-  partOfSpeech: partOfSpeechSchema.optional()
+  partOfSpeech: partOfSpeechSchema.optional(),
+  letter: z.string().trim().max(2).optional()
 });
 
 export const suggestionSchema = z.object({
@@ -73,7 +74,8 @@ export const wordListSchema = z.object({
   category: objectIdSchema.optional(),
   status: z.enum(["draft", "published", "archived", "all"]).default("published"),
   partOfSpeech: partOfSpeechSchema.optional(),
-  sort: z.enum(["alphabetical", "popular", "newest", "updated"]).default("newest")
+  letter: z.string().trim().max(2).optional(),
+  sort: z.enum(["alphabetical", "english-asc", "english-desc", "popular", "newest", "oldest", "updated"]).default("newest")
 });
 
 export const wordParamsSchema = z.object({
