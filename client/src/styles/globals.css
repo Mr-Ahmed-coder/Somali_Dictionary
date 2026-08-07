@@ -47,21 +47,22 @@ a {
   isolation: isolate;
 }
 
-.homeHeroVideo {
-  position: fixed;
+.homeHeroImage {
+  position: absolute;
   inset: 0;
   z-index: -3;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   background: #061210;
 }
 
 .homeHeroOverlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: -2;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .homeHeroContent {
@@ -2074,10 +2075,6 @@ blockquote span {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .homeHeroVideo {
-    display: none;
-  }
-
   .fadeInUp,
   .spin {
     animation: none;

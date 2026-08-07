@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { BookOpen, FolderTree, Languages, LibraryBig, Search, Sparkles, Zap } from "lucide-react";
 import { DictionarySearch } from "@/components/DictionarySearch";
 
@@ -8,26 +9,24 @@ const actionLinks = [
 ];
 
 const stats = [
-  { label: "Total Words", value: "📖", icon: BookOpen },
-  { label: "English ↔ Somali", value: "🔤", icon: Languages },
-  { label: "Categories", value: "📚", icon: FolderTree },
-  { label: "Fast Search", value: "⚡", icon: Zap }
+  { label: "Total Words", value: "\uD83D\uDCD6", icon: BookOpen },
+  { label: "English \u2194 Somali", value: "\uD83D\uDD24", icon: Languages },
+  { label: "Categories", value: "\uD83D\uDCDA", icon: FolderTree },
+  { label: "Fast Search", value: "\u26A1", icon: Zap }
 ];
 
 export function HomeHero() {
   return (
     <section className="homeHero" aria-label="English Somali Dictionary search">
-      <video
-        className="homeHeroVideo"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="metadata"
+      <Image
+        className="homeHeroImage"
+        src="/backgroudimage.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
         aria-hidden="true"
-      >
-        <source src="/background.mp4" type="video/mp4" />
-      </video>
+      />
       <div className="homeHeroOverlay" aria-hidden="true" />
 
       <div className="homeHeroContent">
@@ -38,7 +37,7 @@ export function HomeHero() {
           <strong>Somali Dictionary</strong>
         </div>
 
-        <h1 className="fadeInUp fadeDelay1">English ↔ Somali Dictionary</h1>
+        <h1 className="fadeInUp fadeDelay1">English {"\u2194"} Somali Dictionary</h1>
         <p className="fadeInUp fadeDelay2">Search thousands of English and Somali words instantly.</p>
 
         <div className="homeSearchShell fadeInUp fadeDelay3">
