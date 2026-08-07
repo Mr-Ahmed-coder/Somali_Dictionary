@@ -11,12 +11,14 @@ if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) {
 await connectDatabase();
 
 const email = env.ADMIN_EMAIL.toLowerCase();
-const existingAdmin = await Admin.findOne({ email }).select("+passwordHash");
+const existingAdmin = await Admin.findOne({ email }).select("+passwordHash +tokenVersion +passwordChangedAt");
 const passwordHash = await Admin.hashPassword(env.ADMIN_PASSWORD);
 
 if (existingAdmin) {
   existingAdmin.name = env.ADMIN_NAME || existingAdmin.name;
   existingAdmin.passwordHash = passwordHash;
+  existingAdmin.tokenVersion += 1;
+  existingAdmin.passwordChangedAt = new Date();
   existingAdmin.role = "admin";
   existingAdmin.isActive = true;
   await existingAdmin.save();

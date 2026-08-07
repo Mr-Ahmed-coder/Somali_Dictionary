@@ -3,7 +3,7 @@
 import { AlertCircle, CheckCircle2, FileSpreadsheet, Loader2, Save, Upload, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getErrorMessage } from "@/lib/errorMessage";
-import { commitWordImport, getAdminToken, previewWordImport } from "@/lib/adminApi";
+import { commitWordImport, getAdminProfile, previewWordImport } from "@/lib/adminApi";
 
 const expectedColumns = [
   "english",
@@ -31,14 +31,18 @@ export function ImportWords() {
   const validRows = useMemo(() => rows.filter((row) => row.status === "valid"), [rows]);
 
   useEffect(() => {
-    const token = getAdminToken();
-    if (!token) {
-      window.location.replace("/admin");
-      return;
+    async function validateSession() {
+      try {
+        await getAdminProfile();
+        setIsAuthenticated(true);
+      } catch {
+        window.location.replace("/admin");
+      } finally {
+        setAuthChecked(true);
+      }
     }
 
-    setIsAuthenticated(true);
-    setAuthChecked(true);
+    void validateSession();
   }, []);
 
   async function handlePreview(event) {

@@ -29,6 +29,18 @@ export function createApp() {
       credentials: true
     })
   );
+  app.use((req, res, next) => {
+    const unsafeMethod = !["GET", "HEAD", "OPTIONS"].includes(req.method);
+    const protectedPath = req.path.startsWith("/api/admin") || req.path.startsWith("/api/words");
+    const origin = req.header("origin");
+
+    if (!unsafeMethod || !protectedPath || !origin) return next();
+
+    const requestOrigin = origin.replace(/\/+$/, "");
+    if (allowedOrigins.has(requestOrigin)) return next();
+
+    return res.status(403).json({ message: "Request origin is not allowed" });
+  });
   app.use(express.json({ limit: "1mb" }));
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
   app.use(

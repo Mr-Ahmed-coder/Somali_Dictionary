@@ -19,16 +19,15 @@ import { Pagination } from "@/components/admin/Pagination";
 import { WordTable } from "@/components/admin/WordTable";
 import { getErrorMessage } from "@/lib/errorMessage";
 import {
-  clearAdminToken,
   createAdminCategory,
   createAdminWord,
   deleteAdminWord,
   getAdminCategories,
   getAdminProfile,
   getAdminStats,
-  getAdminToken,
   getAdminWords,
   loginAdmin,
+  logoutAdmin,
   updateAdminWord
 } from "@/lib/adminApi";
 
@@ -88,17 +87,11 @@ export function AdminDashboard() {
 
   useEffect(() => {
     async function validateSession() {
-      const token = getAdminToken();
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
         await getAdminProfile();
         setAuthenticated(true);
       } catch {
-        clearAdminToken();
+        setAuthenticated(false);
       } finally {
         setLoading(false);
       }
@@ -207,8 +200,8 @@ export function AdminDashboard() {
     }
   }
 
-  function handleLogout() {
-    clearAdminToken();
+  async function handleLogout() {
+    await logoutAdmin().catch(() => {});
     setAuthenticated(false);
     setCredentials({ email: "", password: "" });
     setStats(null);

@@ -9,6 +9,7 @@
     "start": "node server.js",
     "seed": "node scripts/seed.js",
     "create-admin": "node scripts/createAdmin.js",
+    "rotate-admin-password": "node scripts/rotateAdminPassword.js",
     "check": "node --check src/index.js"
   },
   "dependencies": {

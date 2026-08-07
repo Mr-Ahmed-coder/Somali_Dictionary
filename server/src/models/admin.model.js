@@ -32,6 +32,17 @@ const adminSchema = new mongoose.Schema(
       default: true,
       index: true
     },
+    tokenVersion: {
+      type: Number,
+      min: 0,
+      default: 0,
+      select: false
+    },
+    passwordChangedAt: {
+      type: Date,
+      default: null,
+      select: false
+    },
     lastLoginAt: Date
   },
   {

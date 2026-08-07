@@ -6,9 +6,13 @@ import { env } from "../config/env.js";
 import { ApiError } from "../utils/apiError.js";
 import { adminLoginSchema } from "../validators/admin.schema.js";
 
+const adminCookieName = "dictionary_admin_session";
+
 export async function login(req, res, next) {
   const { email, password } = adminLoginSchema.parse(req.body);
-  const admin = await Admin.findOne({ email: email.toLowerCase(), role: "admin", isActive: true }).select("+passwordHash");
+  const admin = await Admin.findOne({ email: email.toLowerCase(), role: "admin", isActive: true }).select(
+    "+passwordHash +tokenVersion"
+  );
 
   if (!admin || !(await admin.comparePassword(password))) {
     return next(new ApiError(401, "Invalid admin credentials"));
@@ -20,7 +24,8 @@ export async function login(req, res, next) {
   const token = jwt.sign(
     {
       role: admin.role,
-      email: admin.email
+      email: admin.email,
+      tokenVersion: admin.tokenVersion
     },
     env.JWT_SECRET,
     {
@@ -29,6 +34,8 @@ export async function login(req, res, next) {
     }
   );
 
+  setAdminSessionCookie(res, token);
+
   return res.json({
     admin: {
       id: admin._id,
@@ -36,8 +43,7 @@ export async function login(req, res, next) {
       email: admin.email,
       role: "admin",
       authenticated: true
-    },
-    token
+    }
   });
 }
 
@@ -51,6 +57,11 @@ export async function me(req, res) {
       authenticated: true
     }
   });
+}
+
+export async function logout(_req, res) {
+  clearAdminSessionCookie(res);
+  return res.status(204).send();
 }
 
 export async function getStats(_req, res) {
@@ -110,4 +121,39 @@ export async function getStats(_req, res) {
     latestWords,
     popularWords
   });
+}
+
+function setAdminSessionCookie(res, token) {
+  res.cookie(adminCookieName, token, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/",
+    maxAge: getCookieMaxAgeMs(env.JWT_EXPIRES_IN)
+  });
+}
+
+function clearAdminSessionCookie(res) {
+  res.clearCookie(adminCookieName, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    path: "/"
+  });
+}
+
+function getCookieMaxAgeMs(value = "") {
+  const match = value.trim().match(/^(\d+)([smhd])$/i);
+  if (!match) return 8 * 60 * 60 * 1000;
+
+  const amount = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  const multipliers = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000
+  };
+
+  return amount * multipliers[unit];
 }

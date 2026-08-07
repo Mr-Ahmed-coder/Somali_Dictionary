@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getStats, login, me } from "../controllers/admin.controller.js";
+import { getStats, login, logout, me } from "../controllers/admin.controller.js";
 import { commitImport, previewImport } from "../controllers/import.controller.js";
 import {
   createCategory,
@@ -19,6 +19,7 @@ router.post("/login", loginLimiter, asyncHandler(login));
 
 router.use(requireAdmin);
 
+router.post("/logout", asyncHandler(logout));
 router.get("/me", asyncHandler(me));
 router.get("/stats", asyncHandler(getStats));
 

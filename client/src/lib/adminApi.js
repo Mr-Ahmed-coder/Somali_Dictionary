@@ -1,44 +1,18 @@
 import { API_URL } from "./config";
 
-const TOKEN_KEY = "dictionary_admin_token";
-
-export function getAdminToken() {
-  if (typeof window === "undefined") return "";
-  const token = window.sessionStorage.getItem(TOKEN_KEY) || "";
-
-  if (token && isTokenExpired(token)) {
-    clearAdminToken();
-    return "";
-  }
-
-  return token;
-}
-
-export function setAdminToken(token) {
-  window.sessionStorage.setItem(TOKEN_KEY, token);
-}
-
-export function clearAdminToken() {
-  window.sessionStorage.removeItem(TOKEN_KEY);
-}
-
 export async function adminFetch(path, options = {}) {
-  const token = getAdminToken();
   const isFormData = options.body instanceof FormData;
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     },
+    credentials: "include",
     cache: "no-store"
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
-      clearAdminToken();
-    }
     const errorBody = await response.json().catch(() => ({}));
     throw new Error(errorBody.message || `Request failed with ${response.status}`);
   }
@@ -51,6 +25,7 @@ export async function loginAdmin({ email, password }) {
   const result = await fetch(`${API_URL}/admin/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify({ email, password })
   });
 
@@ -59,9 +34,22 @@ export async function loginAdmin({ email, password }) {
     throw new Error(errorBody.message || "Unable to sign in");
   }
 
-  const data = await result.json();
-  setAdminToken(data.token);
-  return data;
+  return result.json();
+}
+
+export async function logoutAdmin() {
+  const response = await fetch(`${API_URL}/admin/logout`, {
+    method: "POST",
+    credentials: "include",
+    cache: "no-store"
+  });
+
+  if (!response.ok && response.status !== 401) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.message || "Unable to sign out");
+  }
+
+  return null;
 }
 
 export function getAdminProfile() {
@@ -172,22 +160,4 @@ export function commitWordImport(rows) {
     method: "POST",
     body: JSON.stringify({ rows })
   });
-}
-
-function isTokenExpired(token) {
-  const payload = decodeTokenPayload(token);
-  if (!payload?.exp) return true;
-  return payload.exp * 1000 <= Date.now();
-}
-
-function decodeTokenPayload(token) {
-  try {
-    const [, payload] = token.split(".");
-    if (!payload) return null;
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const decoded = window.atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
 }
