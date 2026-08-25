@@ -19,7 +19,10 @@ export async function apiFetch(path, options = {}) {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.message || `API request failed: ${response.status}`);
+    const error = new Error(errorBody.message || `API request failed: ${response.status}`);
+    error.status = response.status;
+    error.details = errorBody.details;
+    throw error;
   }
 
   if (response.status === 204) {
@@ -49,6 +52,31 @@ export async function getSearchSuggestions({ query, limit = 8, signal }) {
   return apiFetch(`/words/suggestions?${params.toString()}`, { cache: "no-store", signal });
 }
 
+export async function trackMissingSearch(query) {
+  return apiFetch("/analytics/missing-search", {
+    method: "POST",
+    body: JSON.stringify({ query: query.trim() }),
+    cache: "no-store"
+  });
+}
+
+export async function trackPopularSearch(wordId) {
+  return apiFetch("/analytics/popular-search", {
+    method: "POST",
+    body: JSON.stringify({ wordId }),
+    cache: "no-store",
+    keepalive: true
+  });
+}
+
+export async function submitWordSuggestion(payload) {
+  return apiFetch("/suggestions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    cache: "no-store"
+  });
+}
+
 export async function getCategories() {
   return apiFetch("/categories", { next: { revalidate: 60 } });
 }
@@ -62,6 +90,14 @@ export async function getCategoryBySlug(slug, options = {}) {
 
 export async function getWords() {
   return apiFetch("/words", { next: { revalidate: 60 } });
+}
+
+export async function getWordOfTheDay({ date, signal }) {
+  const params = new URLSearchParams({ date });
+  return apiFetch(`/words/word-of-the-day?${params.toString()}`, {
+    cache: "no-store",
+    signal
+  });
 }
 
 export async function getWordById(id) {

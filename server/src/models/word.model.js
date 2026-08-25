@@ -43,6 +43,8 @@ const popularitySchema = new mongoose.Schema(
     searchCount: { type: Number, min: 0, default: 0 },
     favoriteCount: { type: Number, min: 0, default: 0 },
     lastViewedAt: { type: Date, default: null },
+    firstSearchedAt: { type: Date, default: null },
+    lastSearchedAt: { type: Date, default: null },
     score: { type: Number, default: 0, index: true }
   },
   { _id: false }
@@ -217,14 +219,21 @@ wordSchema.pre("save", function incrementSyncVersion(next) {
 });
 
 wordSchema.index({ normalizedEnglish: 1, status: 1, "sync.isDeleted": 1 });
+wordSchema.index({ status: 1, "sync.isDeleted": 1, normalizedEnglish: 1, _id: 1 });
 wordSchema.index({ normalizedSomali: 1, status: 1, "sync.isDeleted": 1 });
 wordSchema.index({ searchKeywords: 1, status: 1, "sync.isDeleted": 1 });
 wordSchema.index({ partOfSpeech: 1, normalizedEnglish: 1, status: 1 });
 wordSchema.index({ category: 1, partOfSpeech: 1, status: 1 });
 wordSchema.index({ letter: 1, normalizedEnglish: 1, status: 1, "sync.isDeleted": 1 });
 wordSchema.index({ "popularity.score": -1, status: 1 });
+wordSchema.index({ status: 1, "sync.isDeleted": 1, "popularity.searchCount": -1, _id: 1 });
+wordSchema.index({ status: 1, "sync.isDeleted": 1, "popularity.lastSearchedAt": -1, _id: 1 });
+wordSchema.index({ status: 1, "sync.isDeleted": 1, "popularity.firstSearchedAt": 1, _id: 1 });
 wordSchema.index({ updatedAt: -1, "sync.version": 1 });
-wordSchema.index({ normalizedEnglish: 1, normalizedSomali: 1, partOfSpeech: 1 }, { unique: true });
+wordSchema.index(
+  { normalizedEnglish: 1, normalizedSomali: 1 },
+  { name: "unique_word_pair", unique: true }
+);
 wordSchema.index(
   {
     englishWord: "text",

@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { BookOpen, Tag } from "lucide-react";
+import { SearchResultLink } from "@/components/SearchResultLink";
 
 export function SearchResultCard({ word }) {
   const englishWord = word.englishWord || word.english;
@@ -10,9 +10,10 @@ export function SearchResultCard({ word }) {
   const somaliExample = word.somaliExample || word.examples?.[0]?.somali;
 
   return (
-    <Link
+    <SearchResultLink
       className="searchResultCard transition hover:-translate-y-0.5 hover:border-[#9fc8c1] hover:shadow-search"
       href={`/word/${word._id}`}
+      wordId={word._id}
       aria-label={`Open details for ${englishWord}`}
     >
       <div className="resultTopline">
@@ -52,6 +53,6 @@ export function SearchResultCard({ word }) {
           {somaliExample && <span>{somaliExample}</span>}
         </blockquote>
       )}
-    </Link>
+    </SearchResultLink>
   );
 }

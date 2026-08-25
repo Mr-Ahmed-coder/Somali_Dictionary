@@ -7,6 +7,18 @@ import {
   updateCategory
 } from "../controllers/category.controller.js";
 import { createWord, deleteWord, putWord, updateWord } from "../controllers/word.controller.js";
+import {
+  getMissingSearches,
+  reopenMissingSearch,
+  resolveMissingSearch
+} from "../controllers/missingSearch.controller.js";
+import { getPopularSearches } from "../controllers/popularSearch.controller.js";
+import {
+  createWordFromSuggestion,
+  getAdminWordSuggestion,
+  getAdminWordSuggestions,
+  updateAdminWordSuggestionStatus
+} from "../controllers/wordSuggestionAdmin.controller.js";
 import { requireAdmin } from "../middleware/adminAuth.js";
 import { importUpload } from "../middleware/fileUpload.js";
 import { loginLimiter } from "../middleware/rateLimiters.js";
@@ -22,6 +34,22 @@ router.use(requireAdmin);
 router.post("/logout", asyncHandler(logout));
 router.get("/me", asyncHandler(me));
 router.get("/stats", asyncHandler(getStats));
+router.get("/missing-searches", asyncHandler(getMissingSearches));
+router.get("/popular-searches", asyncHandler(getPopularSearches));
+router.patch("/missing-searches/:id/resolve", validateObjectId("id"), asyncHandler(resolveMissingSearch));
+router.patch("/missing-searches/:id/reopen", validateObjectId("id"), asyncHandler(reopenMissingSearch));
+router.get("/suggestions", asyncHandler(getAdminWordSuggestions));
+router.get("/suggestions/:id", validateObjectId("id"), asyncHandler(getAdminWordSuggestion));
+router.patch(
+  "/suggestions/:id/status",
+  validateObjectId("id"),
+  asyncHandler(updateAdminWordSuggestionStatus)
+);
+router.post(
+  "/suggestions/:id/create-word",
+  validateObjectId("id"),
+  asyncHandler(createWordFromSuggestion)
+);
 
 router.post("/imports/preview", importUpload.single("file"), asyncHandler(previewImport));
 router.post("/imports/commit", asyncHandler(commitImport));

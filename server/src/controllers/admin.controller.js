@@ -1,10 +1,13 @@
 import jwt from "jsonwebtoken";
 import { Category } from "../models/category.model.js";
+import { MissingSearch } from "../models/missingSearch.model.js";
+import { WordSuggestion } from "../models/wordSuggestion.model.js";
 import { Word } from "../models/word.model.js";
 import { Admin } from "../models/admin.model.js";
 import { env } from "../config/env.js";
 import { ApiError } from "../utils/apiError.js";
 import { adminLoginSchema } from "../validators/admin.schema.js";
+import { getPopularSearchSummary } from "../services/popularSearch.service.js";
 
 const adminCookieName = "dictionary_admin_session";
 
@@ -79,7 +82,10 @@ export async function getStats(_req, res) {
     alphabetCounts,
     categoryCounts,
     latestWords,
-    popularWords
+    popularWords,
+    popularSearchSummary,
+    missingSearchSummary,
+    pendingSuggestions
   ] =
     await Promise.all([
       Word.countDocuments({ "sync.isDeleted": false }),
@@ -99,10 +105,13 @@ export async function getStats(_req, res) {
         { $group: { _id: "$category", count: { $sum: 1 } } }
       ]),
       Word.find({ "sync.isDeleted": false }).sort({ createdAt: -1 }).limit(5).select("englishWord somaliWord createdAt"),
-      Word.find({ status: "published", "sync.isDeleted": false })
-        .sort({ "popularity.score": -1, "popularity.searchCount": -1 })
+      Word.find({ status: "published", "sync.isDeleted": false, "popularity.searchCount": { $gt: 0 } })
+        .sort({ "popularity.searchCount": -1, "popularity.lastSearchedAt": -1 })
         .limit(5)
-        .select("englishWord somaliWord popularity")
+        .select("englishWord somaliWord popularity"),
+      getPopularSearchSummary(),
+      MissingSearch.countDocuments({ resolved: false }),
+      WordSuggestion.countDocuments({ status: "pending" })
     ]);
 
   return res.json({
@@ -114,7 +123,11 @@ export async function getStats(_req, res) {
       categories: categoryCount,
       wordTypes: wordTypes.length,
       recentlyAddedToday,
-      alphabetGroups: alphabetCounts.length
+      alphabetGroups: alphabetCounts.length,
+      totalSuccessfulSearches: popularSearchSummary.totalSuccessfulSearches,
+      popularWordsTracked: popularSearchSummary.popularWordsTracked,
+      missingSearches: missingSearchSummary,
+      pendingSuggestions
     },
     alphabetCounts: alphabetCounts.map((item) => ({ letter: item._id, count: item.count })),
     categoryCounts: categoryCounts.map((item) => ({ category: item._id, count: item.count })),

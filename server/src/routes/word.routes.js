@@ -3,6 +3,7 @@ import {
   createWord,
   deleteWord,
   getWord,
+  getWordOfTheDay,
   getWords,
   getWordsByCategory,
   putWord,
@@ -19,6 +20,7 @@ const router = Router();
 router.get("/search", asyncHandler(attachAdmin), asyncHandler(search));
 router.get("/suggestions", asyncHandler(attachAdmin), asyncHandler(suggestions));
 router.get("/category/:category", asyncHandler(getWordsByCategory));
+router.get("/word-of-the-day", asyncHandler(getWordOfTheDay));
 router.get("/", asyncHandler(attachAdmin), asyncHandler(getWords));
 router.post("/", requireAdmin, asyncHandler(createWord));
 router.get("/:id", validateObjectId("id"), asyncHandler(getWord));

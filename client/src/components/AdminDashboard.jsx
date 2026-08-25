@@ -15,6 +15,7 @@ import { AlphabetFilter } from "@/components/admin/AlphabetFilter";
 import { CategorySidebar } from "@/components/admin/CategorySidebar";
 import { DashboardStats } from "@/components/admin/DashboardStats";
 import { FilterBar } from "@/components/admin/FilterBar";
+import { MissingSearchesPanel } from "@/components/admin/MissingSearchesPanel";
 import { Pagination } from "@/components/admin/Pagination";
 import { WordTable } from "@/components/admin/WordTable";
 import { getErrorMessage } from "@/lib/errorMessage";
@@ -181,7 +182,7 @@ export function AdminDashboard() {
   function handleAdminError(error, fallback) {
     const text = getErrorMessage(error, fallback);
     setMessage({ type: "error", text });
-    if (text.toLowerCase().includes("admin") || text.toLowerCase().includes("401")) {
+    if (error?.status === 401 || text.toLowerCase().includes("admin") || text.toLowerCase().includes("401")) {
       handleLogout();
     }
   }
@@ -224,6 +225,21 @@ export function AdminDashboard() {
 
   function handleLetterSelect(letter) {
     handleFilterChange("letter", letter);
+  }
+
+  function handleMissingSearchChanged({ resolved }) {
+    setStats((current) => {
+      if (!current) return current;
+      const missingSearches = current.totals?.missingSearches || 0;
+
+      return {
+        ...current,
+        totals: {
+          ...current.totals,
+          missingSearches: Math.max(0, missingSearches + (resolved ? -1 : 1))
+        }
+      };
+    });
   }
 
   async function refreshDashboard() {
@@ -374,6 +390,9 @@ export function AdminDashboard() {
         <nav>
           <a href="#overview">Overview</a>
           <a href="#alphabet">Alphabet</a>
+          <a href="#missing-searches">Missing Searches</a>
+          <a href="/admin/popular-searches">Popular Searches</a>
+          <a href="/admin/suggestions">Word Suggestions</a>
           <a href="#words">Words</a>
           <a href="#editor">Editor</a>
           <a href="/admin/import">Import</a>
@@ -407,6 +426,7 @@ export function AdminDashboard() {
 
         <DashboardStats totals={stats?.totals} />
         <AlphabetFilter selectedLetter={filters.letter} counts={stats?.alphabetCounts || []} onSelect={handleLetterSelect} />
+        <MissingSearchesPanel onChanged={handleMissingSearchChanged} onError={handleAdminError} />
 
         <section className="adminManagementGrid">
           <CategorySidebar categories={categoryOptions} selectedCategory={filters.category} onSelect={handleCategorySelect} />

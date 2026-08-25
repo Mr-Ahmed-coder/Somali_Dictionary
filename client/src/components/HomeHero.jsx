@@ -5,6 +5,8 @@ import { DictionarySearch } from "@/components/DictionarySearch";
 const actionLinks = [
   { label: "Browse A-Z", href: "/words" },
   { label: "Categories", href: "/categories" },
+  { label: "Favorites", href: "/favorites" },
+  { label: "Recent Searches", href: "/recent" },
   { label: "About Us", href: "/about" }
 ];
 

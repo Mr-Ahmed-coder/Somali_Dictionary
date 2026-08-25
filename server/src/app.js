@@ -8,8 +8,11 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
 import adminRoutes from "./routes/admin.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
+import suggestionRoutes from "./routes/suggestion.routes.js";
 import wordRoutes from "./routes/word.routes.js";
+import { ApiError } from "./utils/apiError.js";
 
 export function createApp() {
   const app = express();
@@ -24,14 +27,18 @@ export function createApp() {
         if (!origin) return callback(null, true);
         const requestOrigin = origin.replace(/\/+$/, "");
         if (allowedOrigins.has(requestOrigin)) return callback(null, true);
-        return callback(new Error("Not allowed by CORS"));
+        return callback(new ApiError(403, "Request origin is not allowed"));
       },
       credentials: true
     })
   );
   app.use((req, res, next) => {
     const unsafeMethod = !["GET", "HEAD", "OPTIONS"].includes(req.method);
-    const protectedPath = req.path.startsWith("/api/admin") || req.path.startsWith("/api/words");
+    const protectedPath =
+      req.path.startsWith("/api/admin") ||
+      req.path.startsWith("/api/words") ||
+      req.path.startsWith("/api/analytics") ||
+      req.path.startsWith("/api/suggestions");
     const origin = req.header("origin");
 
     if (!unsafeMethod || !protectedPath || !origin) return next();
@@ -41,7 +48,6 @@ export function createApp() {
 
     return res.status(403).json({ message: "Request origin is not allowed" });
   });
-  app.use(express.json({ limit: "1mb" }));
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
   app.use(
     rateLimit({
@@ -51,6 +57,8 @@ export function createApp() {
       legacyHeaders: false
     })
   );
+  app.use("/api/suggestions", suggestionRoutes);
+  app.use(express.json({ limit: "1mb" }));
 
   app.get("/", (_req, res) => {
     res.json({
@@ -70,6 +78,7 @@ export function createApp() {
 
   app.use("/api/words", wordRoutes);
   app.use("/api/categories", categoryRoutes);
+  app.use("/api/analytics", analyticsRoutes);
   app.use("/api/admin", adminRoutes);
 
   app.use(notFound);

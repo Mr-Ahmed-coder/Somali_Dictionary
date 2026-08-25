@@ -10,7 +10,7 @@ export function SearchLoadingState() {
   );
 }
 
-export function SearchEmptyState() {
+export function SearchEmptyState({ children = null }) {
   return (
     <div className="searchState emptySearchState" role="status" aria-live="polite">
       <span className="emptySearchIcon" aria-hidden="true">
@@ -18,6 +18,7 @@ export function SearchEmptyState() {
       </span>
       <strong>Ereygan lama helin.</strong>
       <span>Dhawaan ayaan ku soo dari doonnaa.</span>
+      {children}
     </div>
   );
 }

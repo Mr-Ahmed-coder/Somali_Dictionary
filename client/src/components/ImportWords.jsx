@@ -147,6 +147,8 @@ export function ImportWords() {
         </a>
         <div>
           <a href="/admin">Dashboard</a>
+          <a href="/admin/popular-searches">Popular Searches</a>
+          <a href="/admin/suggestions">Suggestions</a>
           <a href="/search">Search</a>
           <a href="/">Public site</a>
         </div>

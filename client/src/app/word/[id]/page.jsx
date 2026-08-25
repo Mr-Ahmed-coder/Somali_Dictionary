@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Languages, Quote, Tag } from "lucide-react";
+import { ArrowLeft, BookOpen, Languages, Quote, Share2, Tag } from "lucide-react";
+import { FavoriteButton } from "@/components/FavoriteButton";
+import { RecentSearchRecorder } from "@/components/RecentSearchRecorder";
+import { WordShareActions } from "@/components/WordShareActions";
 import { getWordById } from "@/lib/api";
 
 export async function generateMetadata({ params }) {
@@ -32,9 +35,17 @@ export default async function WordDetailPage({ params }) {
   const englishExample = word.englishExample || word.examples?.[0]?.english;
   const somaliExample = word.somaliExample || word.examples?.[0]?.somali;
   const categoryName = word.category?.name || word.categories?.[0]?.name;
+  const browserWord = {
+    _id: word._id,
+    english: englishWord,
+    somali: somaliWord,
+    category: categoryName,
+    type: word.partOfSpeech || "word"
+  };
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e9f7f3_0%,#f8fbfa_44%,#eef4f1_100%)] text-ink">
+      <RecentSearchRecorder word={browserWord} />
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8 lg:px-10">
         <Link className="flex items-center gap-2 text-sm font-black text-forest sm:text-base" href="/">
           <span className="grid size-10 place-items-center rounded-2xl bg-white text-ocean shadow-sm ring-1 ring-black/5">
@@ -43,7 +54,7 @@ export default async function WordDetailPage({ params }) {
           <span>English Somali</span>
         </Link>
 
-        <nav className="flex items-center gap-4 text-sm font-bold text-muted sm:gap-6">
+        <nav className="flex flex-wrap items-center justify-end gap-3 text-sm font-bold text-muted sm:gap-6">
           <Link className="transition hover:text-forest" href="/search">
             Search
           </Link>
@@ -52,6 +63,12 @@ export default async function WordDetailPage({ params }) {
           </Link>
           <Link className="transition hover:text-forest" href="/about">
             About
+          </Link>
+          <Link className="transition hover:text-forest" href="/favorites">
+            Favorites
+          </Link>
+          <Link className="transition hover:text-forest" href="/recent">
+            Recent
           </Link>
           <Link className="transition hover:text-forest" href="/admin">
             Admin
@@ -80,6 +97,7 @@ export default async function WordDetailPage({ params }) {
                   {categoryName}
                 </span>
               )}
+              <FavoriteButton word={browserWord} />
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
@@ -114,6 +132,14 @@ export default async function WordDetailPage({ params }) {
                 </div>
               </section>
             )}
+
+            <section className="wordShareSection" aria-labelledby="word-share-title">
+              <h2 className="wordShareHeading" id="word-share-title">
+                <Share2 size={19} aria-hidden="true" />
+                Share this entry
+              </h2>
+              <WordShareActions word={browserWord} />
+            </section>
           </div>
         </article>
       </section>

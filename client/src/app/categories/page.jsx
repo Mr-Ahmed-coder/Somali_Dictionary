@@ -45,7 +45,7 @@ export default async function CategoriesPage() {
           <span>English Somali</span>
         </Link>
 
-        <nav className="flex items-center gap-4 text-sm font-bold text-muted sm:gap-6">
+        <nav className="flex flex-wrap items-center justify-end gap-3 text-sm font-bold text-muted sm:gap-6">
           <Link className="transition hover:text-forest" href="/search">
             Search
           </Link>
@@ -54,6 +54,12 @@ export default async function CategoriesPage() {
           </Link>
           <Link className="transition hover:text-forest" href="/about">
             About
+          </Link>
+          <Link className="transition hover:text-forest" href="/favorites">
+            Favorites
+          </Link>
+          <Link className="transition hover:text-forest" href="/recent">
+            Recent
           </Link>
           <Link className="transition hover:text-forest" href="/admin">
             Admin

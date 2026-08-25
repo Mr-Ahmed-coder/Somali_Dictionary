@@ -1,13 +1,27 @@
 "use client";
 
-import { BookOpen, CalendarPlus, FolderTree, Layers3, ListTree } from "lucide-react";
+import {
+  Activity,
+  BookOpen,
+  CalendarPlus,
+  FolderTree,
+  Layers3,
+  ListTree,
+  MessageSquareText,
+  SearchX,
+  TrendingUp
+} from "lucide-react";
 
 const statConfig = [
   { key: "words", label: "Total Words", icon: BookOpen },
   { key: "categories", label: "Total Categories", icon: FolderTree },
   { key: "wordTypes", label: "Total Word Types", icon: Layers3 },
   { key: "recentlyAddedToday", label: "Recently Added Today", icon: CalendarPlus },
-  { key: "alphabetGroups", label: "Total Alphabet Groups", icon: ListTree }
+  { key: "alphabetGroups", label: "Total Alphabet Groups", icon: ListTree },
+  { key: "totalSuccessfulSearches", label: "Successful Searches", icon: Activity },
+  { key: "popularWordsTracked", label: "Popular Words", icon: TrendingUp },
+  { key: "missingSearches", label: "Missing Searches", icon: SearchX },
+  { key: "pendingSuggestions", label: "Pending Suggestions", icon: MessageSquareText }
 ];
 
 export function DashboardStats({ totals = {} }) {

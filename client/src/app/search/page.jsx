@@ -15,6 +15,8 @@ export default function SearchPage() {
         <div>
           <a href="/words">Words</a>
           <a href="/categories">Categories</a>
+          <a href="/favorites">Favorites</a>
+          <a href="/recent">Recent</a>
           <a href="/about">About</a>
           <a href="/admin">Admin</a>
         </div>

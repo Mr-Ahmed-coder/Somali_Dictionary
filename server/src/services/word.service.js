@@ -1,6 +1,7 @@
 import { Word } from "../models/word.model.js";
 import { Category } from "../models/category.model.js";
 import { ApiError } from "../utils/apiError.js";
+import { getDailyWordIndex } from "../utils/dailyWord.js";
 
 const directionFields = {
   "english-to-somali": "normalizedEnglish",
@@ -16,6 +17,8 @@ const sortStrategies = {
   oldest: { createdAt: 1 },
   updated: { updatedAt: -1, createdAt: -1 }
 };
+
+const wordOfTheDayCache = new Map();
 
 export async function listWords({
   page = 1,
@@ -64,6 +67,41 @@ export async function listWords({
       pages: Math.ceil(total / Number(limit))
     }
   };
+}
+
+export async function findWordOfTheDay(dateKey) {
+  if (wordOfTheDayCache.has(dateKey)) {
+    return wordOfTheDayCache.get(dateKey);
+  }
+
+  const query = { status: "published", "sync.isDeleted": false };
+  const total = await Word.countDocuments(query);
+
+  if (total === 0) {
+    cacheWordOfTheDay(dateKey, null);
+    return null;
+  }
+
+  const dailyIndex = getDailyWordIndex(dateKey, total);
+  const word = await Word.findOne(query)
+    .sort({ normalizedEnglish: 1, _id: 1 })
+    .skip(dailyIndex)
+    .select("englishWord somaliWord partOfSpeech category")
+    .populate("category", "name")
+    .lean();
+
+  const dailyWord = word
+    ? {
+        _id: word._id,
+        english: word.englishWord,
+        somali: word.somaliWord,
+        category: word.category?.name || "General",
+        type: word.partOfSpeech || "word"
+      }
+    : null;
+
+  cacheWordOfTheDay(dateKey, dailyWord);
+  return dailyWord;
 }
 
 export async function searchWords({
@@ -232,11 +270,23 @@ export async function getWordById(id) {
   return word;
 }
 
-export async function createWord(payload) {
+export async function createWord(payload, { session } = {}) {
   if (payload.category) {
-    await assertCategoryExists(payload.category);
+    await assertCategoryExists(payload.category, { session });
   }
-  return Word.create(payload);
+
+  await assertExactWordPairAvailable(payload, { session });
+
+  try {
+    const word = new Word(payload);
+    await word.save({ session });
+    return word;
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw new ApiError(409, "This English and Somali word pair already exists in the dictionary.");
+    }
+    throw error;
+  }
 }
 
 export async function replaceWord(id, payload) {
@@ -281,14 +331,32 @@ export async function deleteWordById(id) {
   word.status = "archived";
   word.sync.isDeleted = true;
   word.sync.deletedAt = new Date();
+  word.popularity.searchCount = 0;
+  word.popularity.firstSearchedAt = null;
+  word.popularity.lastSearchedAt = null;
   await word.save();
 }
 
-async function assertCategoryExists(categoryId) {
-  const exists = await Category.exists({ _id: categoryId, isActive: true });
+async function assertCategoryExists(categoryId, { session } = {}) {
+  const query = Category.exists({ _id: categoryId, isActive: true });
+  if (session) query.session(session);
+  const exists = await query;
 
   if (!exists) {
     throw new ApiError(400, "Category does not exist or is inactive");
+  }
+}
+
+async function assertExactWordPairAvailable(payload, { session } = {}) {
+  const query = Word.exists({
+    normalizedEnglish: normalizeText(payload.englishWord),
+    normalizedSomali: normalizeText(payload.somaliWord)
+  });
+  if (session) query.session(session);
+  const exists = await query;
+
+  if (exists) {
+    throw new ApiError(409, "This English and Somali word pair already exists in the dictionary.");
   }
 }
 
@@ -385,4 +453,13 @@ function normalizeText(value = "") {
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function cacheWordOfTheDay(dateKey, word) {
+  wordOfTheDayCache.set(dateKey, word);
+
+  while (wordOfTheDayCache.size > 4) {
+    const oldestDateKey = wordOfTheDayCache.keys().next().value;
+    wordOfTheDayCache.delete(oldestDateKey);
+  }
 }

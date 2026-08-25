@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+export const objectIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 
-const partOfSpeechSchema = z.enum([
+export const partOfSpeechSchema = z.enum([
   "noun",
   "verb",
   "adjective",
@@ -78,6 +78,24 @@ export const wordListSchema = z.object({
   sort: z.enum(["alphabetical", "english-asc", "english-desc", "popular", "newest", "oldest", "updated"]).default("newest")
 });
 
+export const wordOfTheDaySchema = z.object({
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD format")
+    .refine(isValidDateKey, "Date must be a valid calendar date")
+});
+
 export const wordParamsSchema = z.object({
   id: objectIdSchema
 });
+
+function isValidDateKey(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}

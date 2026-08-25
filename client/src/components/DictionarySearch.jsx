@@ -1,13 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRightLeft, BookOpen, Loader2, Search, Tag } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getSearchSuggestions, searchWords } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { getSearchSuggestions, searchWords, trackMissingSearch } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errorMessage";
 import { SearchEmptyState, SearchErrorState, SearchLoadingState } from "@/components/SearchStates";
 import { SearchForm } from "@/components/SearchForm";
 import { SearchResultCard } from "@/components/SearchResultCard";
+import { SearchResultLink } from "@/components/SearchResultLink";
+import { WordSuggestionDialog } from "@/components/WordSuggestionDialog";
 
 export function DictionarySearch({ compact = false, variant = "default" }) {
   const [query, setQuery] = useState("");
@@ -18,6 +19,8 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionStatus, setSuggestionStatus] = useState("idle");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [completedSearch, setCompletedSearch] = useState({ query: "", direction: "auto", missing: false });
+  const activeSearchesRef = useRef(new Set());
   const isHome = variant === "home";
   const [pagination, setPagination] = useState({ page: 1, limit: compact || isHome ? 4 : 12, pages: 1, total: 0 });
 
@@ -59,6 +62,10 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
     const trimmedQuery = nextQuery.trim();
     if (!trimmedQuery) return;
 
+    const searchKey = `${direction}:${trimmedQuery.toLocaleLowerCase()}:${page}`;
+    if (activeSearchesRef.current.has(searchKey)) return;
+    activeSearchesRef.current.add(searchKey);
+
     setStatus("loading");
     setError("");
     setShowSuggestions(false);
@@ -71,13 +78,26 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
         limit: pagination.limit
       });
 
-      setItems(result.items || []);
-      setPagination(result.pagination || { page, limit: pagination.limit, pages: 1, total: result.items?.length || 0 });
+      const resultItems = result.items || [];
+      const totalResults = Number(result.pagination?.total ?? resultItems.length);
+
+      setItems(resultItems);
+      setPagination(result.pagination || { page, limit: pagination.limit, pages: 1, total: totalResults });
       setStatus("success");
+
+      const missing = page === 1 && resultItems.length === 0 && totalResults === 0;
+      setCompletedSearch({ query: trimmedQuery, direction, missing });
+
+      if (missing) {
+        void trackMissingSearch(trimmedQuery).catch(() => {});
+      }
     } catch (searchError) {
       setItems([]);
       setError(getErrorMessage(searchError, "Could not connect to the dictionary API."));
       setStatus("error");
+      setCompletedSearch({ query: "", direction, missing: false });
+    } finally {
+      activeSearchesRef.current.delete(searchKey);
     }
   }
 
@@ -169,7 +189,11 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
               icon={<BookOpen size={24} />}
               title="Ereygan lama helin."
               description="Dhawaan ayaan ku soo dari doonnaa."
-            />
+            >
+              {completedSearch.missing && (
+                <WordSuggestionDialog query={completedSearch.query} direction={completedSearch.direction} />
+              )}
+            </HomeSearchState>
           )}
           {items.map((item) => (
             <HomeResultCard word={item} key={item._id} />
@@ -205,12 +229,19 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
       <div className={compact ? "compactResults" : "searchResultsGrid"}>
         {status === "loading" && <SearchLoadingState />}
         {status === "error" && <SearchErrorState message={error} />}
-        {status === "success" && items.length === 0 && <SearchEmptyState />}
+        {status === "success" && items.length === 0 && (
+          <SearchEmptyState>
+            {completedSearch.missing && (
+              <WordSuggestionDialog query={completedSearch.query} direction={completedSearch.direction} />
+            )}
+          </SearchEmptyState>
+        )}
         {items.map((item) =>
           compact ? (
-            <Link
+            <SearchResultLink
               className="wordResult block transition hover:-translate-y-0.5 hover:shadow-sm"
               href={`/word/${item._id}`}
+              wordId={item._id}
               key={item._id}
               aria-label={`Open details for ${item.englishWord || item.english}`}
             >
@@ -222,7 +253,7 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
               {(item.englishDefinition || item.definitions?.english?.[0]) && (
                 <small>{item.englishDefinition || item.definitions?.english?.[0]}</small>
               )}
-            </Link>
+            </SearchResultLink>
           ) : (
             <SearchResultCard word={item} key={item._id} />
           )
@@ -306,9 +337,10 @@ function HomeResultCard({ word }) {
   const somaliDefinition = word.somaliDefinition || word.definitions?.somali?.[0];
 
   return (
-    <Link
+    <SearchResultLink
       className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-search"
       href={`/word/${word._id}`}
+      wordId={word._id}
       aria-label={`Open details for ${englishWord}`}
     >
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -343,11 +375,11 @@ function HomeResultCard({ word }) {
           </div>
         </div>
       )}
-    </Link>
+    </SearchResultLink>
   );
 }
 
-function HomeSearchState({ empty = false, icon = null, title, description }) {
+function HomeSearchState({ empty = false, icon = null, title, description, children = null }) {
   const stateClass = empty
     ? "grid min-h-44 place-items-center rounded-3xl border border-[#cfe2dc] bg-[#f4fbf8] p-6 text-center text-muted shadow-sm"
     : "grid min-h-32 place-items-center rounded-3xl border border-dashed border-[#cfddd8] bg-white/70 p-6 text-center text-muted";
@@ -361,6 +393,7 @@ function HomeSearchState({ empty = false, icon = null, title, description }) {
         {icon && <span className={iconClass}>{icon}</span>}
         <strong className="text-base font-black text-ink">{title}</strong>
         {description && <p className="m-0 max-w-xl text-sm font-semibold leading-6">{description}</p>}
+        {children}
       </div>
     </div>
   );

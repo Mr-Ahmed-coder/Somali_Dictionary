@@ -1,6 +1,7 @@
 import {
   createWord as createWordRecord,
   deleteWordById,
+  findWordOfTheDay,
   getWordSuggestions,
   getWordById,
   listWordsByCategory,
@@ -9,7 +10,14 @@ import {
   searchWords,
   updateWordById
 } from "../services/word.service.js";
-import { searchSchema, suggestionSchema, wordCreateSchema, wordListSchema, wordUpdateSchema } from "../validators/word.schema.js";
+import {
+  searchSchema,
+  suggestionSchema,
+  wordCreateSchema,
+  wordListSchema,
+  wordOfTheDaySchema,
+  wordUpdateSchema
+} from "../validators/word.schema.js";
 
 export async function getWords(req, res) {
   const query = wordListSchema.parse(req.query);
@@ -27,6 +35,14 @@ export async function getWords(req, res) {
     items: result.items,
     pagination: result.pagination
   });
+}
+
+export async function getWordOfTheDay(req, res) {
+  const { date } = wordOfTheDaySchema.parse(req.query);
+  const word = await findWordOfTheDay(date);
+
+  res.set("Cache-Control", "public, max-age=300, s-maxage=3600");
+  return res.json({ success: true, word });
 }
 
 export async function search(req, res) {

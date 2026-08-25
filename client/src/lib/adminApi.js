@@ -14,7 +14,9 @@ export async function adminFetch(path, options = {}) {
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.message || `Request failed with ${response.status}`);
+    const error = new Error(errorBody.message || `Request failed with ${response.status}`);
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) return null;
@@ -58,6 +60,93 @@ export function getAdminProfile() {
 
 export function getAdminStats() {
   return adminFetch("/admin/stats");
+}
+
+export function getAdminMissingSearches({
+  page = 1,
+  limit = 25,
+  q = "",
+  status = "missing",
+  sort = "most-searched",
+  signal
+} = {}) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    status,
+    sort
+  });
+
+  if (q.trim()) params.set("q", q.trim());
+  return adminFetch(`/admin/missing-searches?${params.toString()}`, { signal });
+}
+
+export function resolveAdminMissingSearch(id) {
+  return adminFetch(`/admin/missing-searches/${encodeURIComponent(id)}/resolve`, {
+    method: "PATCH"
+  });
+}
+
+export function reopenAdminMissingSearch(id) {
+  return adminFetch(`/admin/missing-searches/${encodeURIComponent(id)}/reopen`, {
+    method: "PATCH"
+  });
+}
+
+export function getAdminPopularSearches({
+  page = 1,
+  limit = 25,
+  q = "",
+  sort = "most-searched",
+  signal
+} = {}) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    sort
+  });
+
+  if (q.trim()) params.set("q", q.trim());
+  return adminFetch(`/admin/popular-searches?${params.toString()}`, { signal });
+}
+
+export function getAdminWordSuggestions({
+  page = 1,
+  limit = 25,
+  q = "",
+  status = "pending",
+  type = "all",
+  sort = "newest",
+  signal
+} = {}) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    status,
+    type,
+    sort
+  });
+
+  if (q.trim()) params.set("q", q.trim());
+  return adminFetch(`/admin/suggestions?${params.toString()}`, { signal });
+}
+
+export function getAdminWordSuggestion(id, { signal } = {}) {
+  return adminFetch(`/admin/suggestions/${encodeURIComponent(id)}`, { signal });
+}
+
+export function updateAdminWordSuggestionStatus(id, status) {
+  return adminFetch(`/admin/suggestions/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status })
+  });
+}
+
+export function createWordFromAdminSuggestion(id, payload) {
+  return adminFetch(`/admin/suggestions/${encodeURIComponent(id)}/create-word`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
 }
 
 export function getAdminCategories() {

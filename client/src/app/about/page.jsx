@@ -41,6 +41,12 @@ export default function AboutPage() {
           <Link className="transition hover:text-forest" href="/categories">
             Categories
           </Link>
+          <Link className="transition hover:text-forest" href="/favorites">
+            Favorites
+          </Link>
+          <Link className="transition hover:text-forest" href="/recent">
+            Recent
+          </Link>
           <Link className="transition hover:text-forest" href="/admin">
             Admin
           </Link>
