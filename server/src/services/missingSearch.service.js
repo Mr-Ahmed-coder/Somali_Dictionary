@@ -28,9 +28,7 @@ export async function recordMissingSearch(query) {
     $setOnInsert: {
       query,
       normalizedQuery,
-      firstSearchedAt: now,
-      resolved: false,
-      resolvedAt: null
+      firstSearchedAt: now
     },
     $set: { lastSearchedAt: now, resolved: false, resolvedAt: null },
     $inc: { count: 1 }
