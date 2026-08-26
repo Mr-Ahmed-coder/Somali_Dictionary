@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightLeft, BookOpen, Loader2, Search, Tag } from "lucide-react";
+import { ArrowRightLeft, BookOpen, ChevronDown, Languages, Loader2, Search, Tag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getSearchSuggestions, searchWords, trackMissingSearch } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errorMessage";
@@ -121,54 +121,45 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
 
   if (isHome) {
     return (
-      <section className="mx-auto w-full max-w-4xl">
-        <form
-          className="rounded-[2rem] bg-white/95 p-2.5 shadow-[0_30px_90px_rgba(0,0,0,0.32)] ring-1 ring-white/30 backdrop-blur-xl transition duration-300 focus-within:-translate-y-0.5 focus-within:bg-white sm:p-3"
-          onSubmit={onSubmit}
-        >
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative flex-1">
+      <section className="homeDictionarySearch">
+        <form className="homeSearchForm" onSubmit={onSubmit}>
+          <div className="homeSearchPrimary">
+            <div className="homeSearchInputWrap">
               <Search
-                className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-muted"
-                size={22}
+                className="homeSearchIcon"
+                size={24}
+                aria-hidden="true"
               />
               <input
-                className="min-h-16 rounded-[1.45rem] border-0 bg-[#f6fbf9] pl-14 pr-5 text-lg font-bold text-ink outline-none ring-1 ring-[#dce8e3] transition duration-300 placeholder:text-[#8a9993] focus:bg-white focus:ring-2 focus:ring-ocean sm:min-h-20 sm:text-xl"
+                className="homeSearchInput"
                 value={query}
                 onChange={(event) => handleQueryChange(event.target.value)}
                 onFocus={() => setShowSuggestions(Boolean(query.trim()))}
-                placeholder="Search English or Somali words"
+                placeholder="Search English or Somali words..."
                 autoComplete="off"
                 aria-label="Search English or Somali dictionary words"
               />
             </div>
+
+            <label className="homeSearchDirection">
+              <Languages size={19} aria-hidden="true" />
+              <span className="sr-only">Search direction</span>
+              <select value={direction} onChange={(event) => setDirection(event.target.value)} aria-label="Search direction">
+                <option value="auto">Both languages</option>
+                <option value="english-to-somali">English to Somali</option>
+                <option value="somali-to-english">Somali to English</option>
+              </select>
+              <ChevronDown size={17} aria-hidden="true" />
+            </label>
+
             <button
-              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[1.35rem] bg-forest px-7 text-base font-black text-white shadow-lg shadow-forest/30 transition duration-300 hover:bg-ocean disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-20"
+              className="homeSearchButton"
               disabled={status === "loading" || !query.trim()}
               type="submit"
             >
               {status === "loading" ? <Loader2 className="spin" size={20} /> : <Search size={20} />}
               Search
             </button>
-          </div>
-
-          <div className="mt-3 grid gap-2 rounded-[1.35rem] bg-[#eef6f3] p-1.5 sm:grid-cols-3">
-            {[
-              ["auto", "Auto"],
-              ["english-to-somali", "English to Somali"],
-              ["somali-to-english", "Somali to English"]
-            ].map(([value, label]) => (
-              <button
-                className={`min-h-11 rounded-2xl text-sm font-black transition ${
-                  direction === value ? "bg-white text-forest shadow-sm" : "text-muted hover:text-forest"
-                }`}
-                key={value}
-                onClick={() => setDirection(value)}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
           </div>
         </form>
 
