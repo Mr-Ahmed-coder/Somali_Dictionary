@@ -177,9 +177,10 @@ npm run lint --prefix client
 Render settings:
 
 - Root directory: `server`
-- Build command: `npm install`
+- Build command: `npm --prefix .. ci --omit=dev --workspace dictionary-api`
 - Start command: `npm start`
-- Health check path: `/`
+- Health check path: `/api/health`
+- Node.js version: `24.18.0` (pinned in `.node-version` and `package.json`)
 
 Required backend environment variables on Render:
 
@@ -195,6 +196,13 @@ ADMIN_PASSWORD=your_long_secure_admin_password
 ADMIN_NAME=Dictionary Admin
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX=200
+MONGODB_CONNECT_MAX_ATTEMPTS=5
+MONGODB_CONNECT_RETRY_MS=1000
+MONGODB_SERVER_SELECTION_TIMEOUT_MS=10000
+MONGODB_CONNECT_TIMEOUT_MS=10000
+MONGODB_SOCKET_TIMEOUT_MS=30000
+MONGODB_QUERY_TIMEOUT_MS=10000
+SHUTDOWN_TIMEOUT_MS=10000
 AI_PROVIDER=disabled
 AI_API_KEY=
 ```

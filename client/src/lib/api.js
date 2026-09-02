@@ -1,35 +1,25 @@
 import { API_URL } from "./config";
+import { readJsonResponse, reliableFetch } from "./reliableFetch";
 
 export { API_URL };
 
 export async function apiFetch(path, options = {}) {
-  const { next, cache, headers, ...fetchOptions } = options;
-  const timeoutSignal =
-    typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined;
-  const response = await fetch(`${API_URL}${path}`, {
+  const { next, cache, headers, retries, timeoutMs, ...fetchOptions } = options;
+  const method = (fetchOptions.method || "GET").toUpperCase();
+  const hasJsonBody = fetchOptions.body !== undefined && method !== "GET" && method !== "HEAD";
+  const response = await reliableFetch(`${API_URL}${path}`, {
     ...fetchOptions,
     ...(cache ? { cache } : {}),
     ...(next ? { next } : {}),
-    signal: fetchOptions.signal || timeoutSignal,
+    retries: retries ?? (method === "GET" ? 1 : 0),
+    timeoutMs: timeoutMs ?? (method === "GET" ? 30000 : 10000),
     headers: {
-      "Content-Type": "application/json",
+      ...(hasJsonBody ? { "Content-Type": "application/json" } : {}),
       ...(headers || {})
     }
   });
 
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const error = new Error(errorBody.message || `API request failed: ${response.status}`);
-    error.status = response.status;
-    error.details = errorBody.details;
-    throw error;
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
+  return readJsonResponse(response);
 }
 
 export async function searchWords({ query, direction = "auto", page = 1, limit = 12 }) {
@@ -56,7 +46,8 @@ export async function trackMissingSearch(query) {
   return apiFetch("/analytics/missing-search", {
     method: "POST",
     body: JSON.stringify({ query: query.trim() }),
-    cache: "no-store"
+    cache: "no-store",
+    timeoutMs: 4000
   });
 }
 
@@ -65,7 +56,8 @@ export async function trackPopularSearch(wordId) {
     method: "POST",
     body: JSON.stringify({ wordId }),
     cache: "no-store",
-    keepalive: true
+    keepalive: true,
+    timeoutMs: 4000
   });
 }
 

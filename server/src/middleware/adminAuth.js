@@ -26,11 +26,19 @@ export async function attachAdmin(req, _res, next) {
     if (admin) {
       req.admin = admin;
     }
-  } catch {
+  } catch (error) {
+    if (!isJwtError(error)) {
+      return next(error);
+    }
+
     req.adminAuthError = new ApiError(401, "Admin session expired. Please sign in again.");
   }
 
   return next();
+}
+
+function isJwtError(error) {
+  return ["TokenExpiredError", "JsonWebTokenError", "NotBeforeError"].includes(error?.name);
 }
 
 export async function requireAdmin(req, res, next) {

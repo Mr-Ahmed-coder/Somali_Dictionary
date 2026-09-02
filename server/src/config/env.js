@@ -17,6 +17,13 @@ const envSchema = z.object({
   ADMIN_NAME: z.string().optional(),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000),
   RATE_LIMIT_MAX: z.coerce.number().default(200),
+  MONGODB_CONNECT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(5),
+  MONGODB_CONNECT_RETRY_MS: z.coerce.number().int().min(100).max(30000).default(1000),
+  MONGODB_SERVER_SELECTION_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
+  MONGODB_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
+  MONGODB_SOCKET_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(30000),
+  MONGODB_QUERY_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
+  SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
   AI_PROVIDER: z.string().default("disabled"),
   AI_API_KEY: z.string().optional()
 });

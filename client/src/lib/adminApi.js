@@ -1,54 +1,45 @@
 import { API_URL } from "./config";
+import { readJsonResponse, reliableFetch } from "./reliableFetch";
 
 export async function adminFetch(path, options = {}) {
-  const isFormData = options.body instanceof FormData;
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
+  const { headers, retries, timeoutMs, ...fetchOptions } = options;
+  const isFormData = typeof FormData !== "undefined" && fetchOptions.body instanceof FormData;
+  const method = (fetchOptions.method || "GET").toUpperCase();
+  const hasJsonBody = !isFormData && fetchOptions.body !== undefined && method !== "GET" && method !== "HEAD";
+  const response = await reliableFetch(`${API_URL}${path}`, {
+    ...fetchOptions,
+    retries: retries ?? (method === "GET" ? 1 : 0),
+    timeoutMs: timeoutMs ?? (method === "GET" ? 30000 : 10000),
     headers: {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(options.headers || {})
+      ...(hasJsonBody ? { "Content-Type": "application/json" } : {}),
+      ...(headers || {})
     },
     credentials: "include",
     cache: "no-store"
   });
 
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    const error = new Error(errorBody.message || `Request failed with ${response.status}`);
-    error.status = response.status;
-    throw error;
-  }
-
-  if (response.status === 204) return null;
-  return response.json();
+  return readJsonResponse(response, "Request failed");
 }
 
 export async function loginAdmin({ email, password }) {
-  const result = await fetch(`${API_URL}/admin/login`, {
+  return adminFetch("/admin/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, password }),
+    timeoutMs: 65000
   });
-
-  if (!result.ok) {
-    const errorBody = await result.json().catch(() => ({}));
-    throw new Error(errorBody.message || "Unable to sign in");
-  }
-
-  return result.json();
 }
 
 export async function logoutAdmin() {
-  const response = await fetch(`${API_URL}/admin/logout`, {
+  const response = await reliableFetch(`${API_URL}/admin/logout`, {
     method: "POST",
     credentials: "include",
-    cache: "no-store"
+    cache: "no-store",
+    timeoutMs: 10000,
+    retries: 0
   });
 
   if (!response.ok && response.status !== 401) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.message || "Unable to sign out");
+    return readJsonResponse(response, "Unable to sign out");
   }
 
   return null;

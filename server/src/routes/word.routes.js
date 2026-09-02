@@ -12,13 +12,14 @@ import {
   updateWord
 } from "../controllers/word.controller.js";
 import { attachAdmin, requireAdmin } from "../middleware/adminAuth.js";
+import { searchLimiter, searchSuggestionsLimiter } from "../middleware/rateLimiters.js";
 import { validateObjectId } from "../middleware/validateObjectId.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();
 
-router.get("/search", asyncHandler(attachAdmin), asyncHandler(search));
-router.get("/suggestions", asyncHandler(attachAdmin), asyncHandler(suggestions));
+router.get("/search", searchLimiter, asyncHandler(attachAdmin), asyncHandler(search));
+router.get("/suggestions", searchSuggestionsLimiter, asyncHandler(attachAdmin), asyncHandler(suggestions));
 router.get("/category/:category", asyncHandler(getWordsByCategory));
 router.get("/word-of-the-day", asyncHandler(getWordOfTheDay));
 router.get("/", asyncHandler(attachAdmin), asyncHandler(getWords));

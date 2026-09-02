@@ -25,7 +25,7 @@ export function SearchEmptyState({ children = null }) {
 
 export function SearchErrorState({ message }) {
   return (
-    <div className="searchState errorState">
+    <div className="searchState errorState" role="alert" aria-live="polite">
       <AlertCircle size={26} />
       <strong>Search unavailable</strong>
       <span>{message || "Could not connect to the dictionary API."}</span>

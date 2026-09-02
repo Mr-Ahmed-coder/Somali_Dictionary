@@ -4,9 +4,10 @@ services:
     runtime: node
     rootDir: server
     plan: free
-    buildCommand: npm install
+    buildCommand: npm --prefix .. ci --omit=dev --workspace dictionary-api
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /api/health
+    maxShutdownDelaySeconds: 15
     envVars:
       - key: NODE_ENV
         value: production
@@ -28,5 +29,19 @@ services:
         value: "900000"
       - key: RATE_LIMIT_MAX
         value: "200"
+      - key: MONGODB_CONNECT_MAX_ATTEMPTS
+        value: "5"
+      - key: MONGODB_CONNECT_RETRY_MS
+        value: "1000"
+      - key: MONGODB_SERVER_SELECTION_TIMEOUT_MS
+        value: "10000"
+      - key: MONGODB_CONNECT_TIMEOUT_MS
+        value: "10000"
+      - key: MONGODB_SOCKET_TIMEOUT_MS
+        value: "30000"
+      - key: MONGODB_QUERY_TIMEOUT_MS
+        value: "10000"
+      - key: SHUTDOWN_TIMEOUT_MS
+        value: "10000"
       - key: AI_PROVIDER
         value: disabled
