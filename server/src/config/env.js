@@ -9,6 +9,7 @@ const envSchema = z.object({
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
   MONGODB_DNS_SERVERS: z.string().optional(),
   FRONTEND_URL: z.string().min(1, "FRONTEND_URL is required"),
+  CORS_ORIGINS: z.string().optional(),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   JWT_EXPIRES_IN: z.string().default("8h"),
   ADMIN_API_KEY: z.string().optional(),
@@ -30,11 +31,26 @@ const envSchema = z.object({
 
 const parsedEnv = envSchema.parse(process.env);
 
+const productionFrontendOrigins = [
+  "https://somali-dictionary.com",
+  "https://www.somali-dictionary.com"
+];
+
 export const env = {
   ...parsedEnv,
   MONGODB_DNS_SERVERS: parseList(parsedEnv.MONGODB_DNS_SERVERS),
-  CORS_ORIGINS: parseOrigins(parsedEnv.FRONTEND_URL)
+  CORS_ORIGINS: buildCorsOrigins(parsedEnv)
 };
+
+function buildCorsOrigins({ CORS_ORIGINS, FRONTEND_URL, NODE_ENV }) {
+  const configuredOrigins = [
+    ...parseOrigins(FRONTEND_URL),
+    ...parseOrigins(CORS_ORIGINS)
+  ];
+  const developmentOrigins = NODE_ENV === "production" ? [] : ["http://localhost:3000"];
+
+  return [...new Set([...configuredOrigins, ...productionFrontendOrigins, ...developmentOrigins])];
+}
 
 function parseOrigins(value = "") {
   return parseList(value).map(normalizeOrigin).filter(Boolean);
