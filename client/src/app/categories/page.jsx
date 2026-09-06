@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { BookOpen, Languages } from "lucide-react";
 import { CategoryBrowser } from "@/components/CategoryBrowser";
+import { JsonLd } from "@/components/JsonLd";
 import { getCategories, getCategoryBySlug } from "@/lib/api";
+import { absoluteUrl, buildMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Browse Categories - English Somali Dictionary",
-  description: "Browse English and Somali dictionary words by category."
-};
+export const metadata = buildMetadata({
+  title: "English–Somali Dictionary Categories",
+  description: "Browse English and Somali dictionary words by topic, including education, medical, technology, food, business, travel, and general vocabulary.",
+  path: "/categories"
+});
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const browseOrder = [
   "Education",
@@ -26,17 +29,33 @@ const browseOrder = [
 export default async function CategoriesPage() {
   const result = await getCategories().catch(() => ({ items: [] }));
   const categories = normalizeCategories(result.items || []);
-  const categoryResults = await Promise.all(
-    categories.map((category) =>
-      getCategoryBySlug(category.slug)
-        .then((data) => [category.slug, data])
-        .catch(() => [category.slug, { item: category, words: [] }])
-    )
-  );
-  const initialCategoryData = Object.fromEntries(categoryResults);
+  const firstCategory = categories[0];
+  const firstCategoryData = firstCategory
+    ? await getCategoryBySlug(firstCategory.slug).catch(() => ({ item: firstCategory, words: [] }))
+    : null;
+  const initialCategoryData = firstCategory ? { [firstCategory.slug]: firstCategoryData } : {};
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e9f7f3_0%,#f8fbfa_44%,#eef4f1_100%)] text-ink">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "English–Somali Dictionary Categories",
+          url: absoluteUrl("/categories"),
+          mainEntity: {
+            "@type": "ItemList",
+            itemListElement: categories
+              .filter((category) => Number(category.wordCount || 0) > 0)
+              .map((category, index) => ({
+                "@type": "ListItem",
+                position: index + 1,
+                name: category.name,
+                url: absoluteUrl(`/categories/${category.slug}`)
+              }))
+          }
+        }}
+      />
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8 lg:px-10">
         <Link className="flex items-center gap-2 text-sm font-black text-forest sm:text-base" href="/">
           <span className="grid size-10 place-items-center rounded-2xl bg-white text-ocean shadow-sm ring-1 ring-black/5">

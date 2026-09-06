@@ -9,6 +9,7 @@ import { SearchForm } from "@/components/SearchForm";
 import { SearchResultCard } from "@/components/SearchResultCard";
 import { SearchResultLink } from "@/components/SearchResultLink";
 import { WordSuggestionDialog } from "@/components/WordSuggestionDialog";
+import { getWordPath } from "@/lib/seo";
 
 export function DictionarySearch({ compact = false, variant = "default" }) {
   const [query, setQuery] = useState("");
@@ -231,7 +232,7 @@ export function DictionarySearch({ compact = false, variant = "default" }) {
           compact ? (
             <SearchResultLink
               className="wordResult block transition hover:-translate-y-0.5 hover:shadow-sm"
-              href={`/word/${item._id}`}
+              href={getWordPath(item)}
               wordId={item._id}
               key={item._id}
               aria-label={`Open details for ${item.englishWord || item.english}`}
@@ -330,7 +331,7 @@ function HomeResultCard({ word }) {
   return (
     <SearchResultLink
       className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-search"
-      href={`/word/${word._id}`}
+      href={getWordPath(word)}
       wordId={word._id}
       aria-label={`Open details for ${englishWord}`}
     >

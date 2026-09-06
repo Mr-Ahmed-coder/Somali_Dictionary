@@ -78,6 +78,15 @@ export const wordListSchema = z.object({
   sort: z.enum(["alphabetical", "english-asc", "english-desc", "popular", "newest", "oldest", "updated"]).default("newest")
 });
 
+export const seoWordListSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(10000).default(10000)
+});
+
+export const wordLookupSchema = z.object({
+  identifier: z.string().trim().min(1).max(400)
+});
+
 export const wordOfTheDaySchema = z.object({
   date: z
     .string()

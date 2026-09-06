@@ -3,7 +3,9 @@ import {
   createWord,
   deleteWord,
   getWord,
+  getWordLookup,
   getWordOfTheDay,
+  getSeoWords,
   getWords,
   getWordsByCategory,
   putWord,
@@ -22,6 +24,8 @@ router.get("/search", searchLimiter, asyncHandler(attachAdmin), asyncHandler(sea
 router.get("/suggestions", searchSuggestionsLimiter, asyncHandler(attachAdmin), asyncHandler(suggestions));
 router.get("/category/:category", asyncHandler(getWordsByCategory));
 router.get("/word-of-the-day", asyncHandler(getWordOfTheDay));
+router.get("/seo-index", asyncHandler(getSeoWords));
+router.get("/lookup/:identifier", asyncHandler(getWordLookup));
 router.get("/", asyncHandler(attachAdmin), asyncHandler(getWords));
 router.post("/", requireAdmin, asyncHandler(createWord));
 router.get("/:id", validateObjectId("id"), asyncHandler(getWord));

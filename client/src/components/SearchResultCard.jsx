@@ -1,5 +1,6 @@
 import { BookOpen, Tag } from "lucide-react";
 import { SearchResultLink } from "@/components/SearchResultLink";
+import { getWordPath } from "@/lib/seo";
 
 export function SearchResultCard({ word }) {
   const englishWord = word.englishWord || word.english;
@@ -12,7 +13,7 @@ export function SearchResultCard({ word }) {
   return (
     <SearchResultLink
       className="searchResultCard transition hover:-translate-y-0.5 hover:border-[#9fc8c1] hover:shadow-search"
-      href={`/word/${word._id}`}
+      href={getWordPath(word)}
       wordId={word._id}
       aria-label={`Open details for ${englishWord}`}
     >

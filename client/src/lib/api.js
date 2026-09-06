@@ -75,13 +75,20 @@ export async function getCategories() {
 
 export async function getCategoryBySlug(slug, options = {}) {
   return apiFetch(`/categories/${encodeURIComponent(slug)}`, {
-    cache: "no-store",
+    next: { revalidate: 300 },
     ...options
   });
 }
 
-export async function getWords() {
-  return apiFetch("/words", { next: { revalidate: 60 } });
+export async function getWords({ page = 1, limit = 24, letter, sort = "alphabetical" } = {}) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    sort
+  });
+
+  if (letter) params.set("letter", letter);
+  return apiFetch(`/words?${params.toString()}`, { next: { revalidate: 300 } });
 }
 
 export async function getWordOfTheDay({ date, signal }) {
@@ -95,4 +102,18 @@ export async function getWordOfTheDay({ date, signal }) {
 export async function getWordById(id) {
   const result = await apiFetch(`/words/${encodeURIComponent(id)}`, { cache: "no-store" });
   return result.item || result.word || result.data || result;
+}
+
+export async function getWordByIdentifier(identifier) {
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(identifier);
+  const path = isObjectId
+    ? `/words/${encodeURIComponent(identifier)}`
+    : `/words/lookup/${encodeURIComponent(identifier)}`;
+  const result = await apiFetch(path, isObjectId ? { cache: "no-store" } : { next: { revalidate: 300 } });
+  return result.item || result.word || result.data || result;
+}
+
+export async function getSeoWords({ page = 1, limit = 10000 } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return apiFetch(`/words/seo-index?${params.toString()}`, { next: { revalidate: 3600 } });
 }

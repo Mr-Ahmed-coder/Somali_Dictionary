@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Clock3, History, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRecentSearches } from "@/hooks/useRecentSearches";
+import { getWordPath } from "@/lib/seo";
 
 export function RecentSearchesList() {
   const { recentSearches, ready, removeRecentSearch, clearRecentSearches } = useRecentSearches();
@@ -77,7 +78,7 @@ export function RecentSearchesList() {
       <div className="favoritesGrid">
         {recentSearches.map((word) => (
           <article className="favoriteCard" key={word._id}>
-            <Link className="favoriteCardLink" href={`/word/${word._id}`}>
+            <Link className="favoriteCardLink" href={getWordPath(word)}>
               <div className="recentCardTopline">
                 <span className="favoriteType">{word.type || "word"}</span>
                 <span className="recentViewedAt">

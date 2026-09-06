@@ -7,6 +7,7 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import { WordShareActions } from "@/components/WordShareActions";
 import { getWordOfTheDay } from "@/lib/api";
 import { getLocalDateKey, millisecondsUntilNextLocalDay } from "@/lib/localDate";
+import { getWordPath } from "@/lib/seo";
 
 const DAILY_WORD_CACHE_KEY = "dictionary_word_of_the_day";
 
@@ -107,12 +108,12 @@ export function WordOfTheDay() {
             </div>
 
             <div className="wordOfDayActions">
-              <Link className="wordOfDayDetailsButton" href={`/word/${word._id}`}>
+              <Link className="wordOfDayDetailsButton" href={getWordPath(word)}>
                 View Details
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <FavoriteButton word={word} />
-              <WordShareActions compact url={`/word/${word._id}`} word={word} />
+              <WordShareActions compact url={getWordPath(word)} word={word} />
             </div>
           </article>
         )}

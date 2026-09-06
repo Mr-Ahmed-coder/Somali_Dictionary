@@ -1,9 +1,12 @@
 import { DictionarySearch } from "@/components/DictionarySearch";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Search English Somali Dictionary",
-  description: "Search English and Somali words, definitions, examples, and categories."
-};
+export const metadata = buildMetadata({
+  title: "Search English and Somali Words",
+  description: "Search English and Somali words, definitions, examples, and categories.",
+  path: "/search",
+  index: false
+});
 
 export default function SearchPage() {
   return (

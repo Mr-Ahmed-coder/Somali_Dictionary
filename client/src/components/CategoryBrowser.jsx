@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen, Loader2, Search, Tag } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getCategoryBySlug } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errorMessage";
+import { getWordPath } from "@/lib/seo";
 
 export function CategoryBrowser({ categories, initialCategoryData = {} }) {
   const [activeSlug, setActiveSlug] = useState(categories[0]?.slug || "");
@@ -70,15 +71,19 @@ export function CategoryBrowser({ categories, initialCategoryData = {} }) {
         {categories.map((item) => {
           const active = item.slug === activeSlug;
           return (
-            <button
+            <Link
               className={`rounded-3xl border p-4 text-left transition ${
                 active
                   ? "border-forest bg-forest text-white shadow-search"
                   : "border-[#dce8e3] bg-white text-ink shadow-sm hover:-translate-y-0.5 hover:border-[#9fc8c1]"
               }`}
               key={item.slug}
-              onClick={() => setActiveSlug(item.slug)}
-              type="button"
+              href={`/categories/${item.slug}`}
+              onClick={(event) => {
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                setActiveSlug(item.slug);
+              }}
             >
               <span className={`mb-4 grid size-10 place-items-center rounded-2xl ${active ? "bg-white/15" : "bg-[#e7f4f1] text-forest"}`}>
                 <Tag size={18} />
@@ -87,7 +92,7 @@ export function CategoryBrowser({ categories, initialCategoryData = {} }) {
               <span className={`mt-1 block text-sm font-bold ${active ? "text-white/75" : "text-muted"}`}>
                 {item.wordCount || 0} words
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>
@@ -161,7 +166,7 @@ function CategoryWordCard({ word }) {
   return (
     <Link
       className="group grid gap-4 rounded-3xl border border-[#dce8e3] bg-[#fbfdfc] p-5 transition hover:-translate-y-0.5 hover:border-[#9fc8c1] hover:shadow-search"
-      href={`/word/${word._id}`}
+      href={getWordPath(word)}
     >
       <div className="flex items-center justify-between gap-3">
         <span className="rounded-full bg-[#e7f4f1] px-3 py-1 text-xs font-black uppercase text-forest">

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { BookOpen, Brain, GraduationCap, Languages, Mail, MessageSquareText, Mic, Smartphone } from "lucide-react";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "About Us - English Somali Dictionary",
-  description: "Ku saabsan barnaamijka English Somali Dictionary iyo himilada mustaqbalka."
-};
+export const metadata = buildMetadata({
+  title: "About the English–Somali Dictionary",
+  description: "Learn about the English–Somali Dictionary, its educational mission, and plans to support Somali learners.",
+  path: "/about"
+});
 
 const goals = [
   "Barashada luuqadaha qalaad",

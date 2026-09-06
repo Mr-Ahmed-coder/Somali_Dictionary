@@ -270,6 +270,69 @@ export async function getWordById(id) {
   return word;
 }
 
+export async function getPublishedWordByIdentifier(identifier) {
+  const baseQuery = { status: "published", "sync.isDeleted": false };
+
+  if (/^[0-9a-fA-F]{24}$/.test(identifier)) {
+    return Word.findOne({ ...baseQuery, _id: identifier }).populate("category", "name slug");
+  }
+
+  const decodedIdentifier = identifier.toLowerCase();
+  const idSuffix = decodedIdentifier.match(/--([0-9a-f]{24})$/i)?.[1];
+
+  if (idSuffix) {
+    return Word.findOne({ ...baseQuery, _id: idSuffix }).populate("category", "name slug");
+  }
+
+  const [englishSlug, somaliSlug] = decodedIdentifier.includes("--")
+    ? decodedIdentifier.split("--", 2)
+    : [decodedIdentifier, ""];
+  const englishCandidates = getIdentifierCandidates(englishSlug);
+  const somaliCandidates = getIdentifierCandidates(somaliSlug);
+
+  const query = somaliSlug
+    ? {
+        ...baseQuery,
+        normalizedEnglish: { $in: englishCandidates },
+        normalizedSomali: { $in: somaliCandidates }
+      }
+    : {
+        ...baseQuery,
+        $or: [
+          { normalizedEnglish: { $in: englishCandidates } },
+          { normalizedSomali: { $in: englishCandidates } }
+        ]
+      };
+
+  return Word.findOne(query)
+    .populate("category", "name slug")
+    .sort({ normalizedEnglish: 1, normalizedSomali: 1, _id: 1 });
+}
+
+export async function listSeoWords({ page = 1, limit = 10000 }) {
+  const query = { status: "published", "sync.isDeleted": false };
+  const skip = (Number(page) - 1) * Number(limit);
+  const [items, total] = await Promise.all([
+    Word.find(query)
+      .select("_id englishWord somaliWord updatedAt")
+      .sort({ normalizedEnglish: 1, _id: 1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .lean(),
+    Word.countDocuments(query)
+  ]);
+
+  return {
+    items,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      pages: Math.ceil(total / Number(limit))
+    }
+  };
+}
+
 export async function createWord(payload, { session } = {}) {
   if (payload.category) {
     await assertCategoryExists(payload.category, { session });
@@ -453,6 +516,11 @@ function normalizeText(value = "") {
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function getIdentifierCandidates(value = "") {
+  const normalized = normalizeText(value);
+  return [...new Set([normalized, normalizeText(normalized.replace(/-/g, " "))].filter(Boolean))];
 }
 
 function cacheWordOfTheDay(dateKey, word) {

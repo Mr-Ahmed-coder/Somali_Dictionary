@@ -4,6 +4,8 @@ import {
   findWordOfTheDay,
   getWordSuggestions,
   getWordById,
+  getPublishedWordByIdentifier,
+  listSeoWords,
   listWordsByCategory,
   listWords,
   replaceWord,
@@ -12,12 +14,15 @@ import {
 } from "../services/word.service.js";
 import {
   searchSchema,
+  seoWordListSchema,
   suggestionSchema,
   wordCreateSchema,
   wordListSchema,
+  wordLookupSchema,
   wordOfTheDaySchema,
   wordUpdateSchema
 } from "../validators/word.schema.js";
+import { ApiError } from "../utils/apiError.js";
 
 export async function getWords(req, res) {
   const query = wordListSchema.parse(req.query);
@@ -62,6 +67,26 @@ export async function suggestions(req, res) {
 export async function getWord(req, res) {
   const word = await getWordById(req.params.id);
   return res.json({ item: word });
+}
+
+export async function getWordLookup(req, res) {
+  const { identifier } = wordLookupSchema.parse(req.params);
+  const word = await getPublishedWordByIdentifier(identifier);
+
+  if (!word) {
+    throw new ApiError(404, "Word not found");
+  }
+
+  res.set("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
+  return res.json({ item: word });
+}
+
+export async function getSeoWords(req, res) {
+  const query = seoWordListSchema.parse(req.query);
+  const result = await listSeoWords(query);
+
+  res.set("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
+  return res.json({ success: true, items: result.items, pagination: result.pagination });
 }
 
 export async function getWordsByCategory(req, res) {

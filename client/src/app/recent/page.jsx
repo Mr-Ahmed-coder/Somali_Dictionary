@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { History, Languages } from "lucide-react";
 import { RecentSearchesList } from "@/components/RecentSearchesList";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Recent Searches - English Somali Dictionary",
-  description: "Return to English and Somali dictionary words recently viewed in this browser."
-};
+export const metadata = buildMetadata({
+  title: "Recent Dictionary Searches",
+  description: "Return to English and Somali dictionary words recently viewed in this browser.",
+  path: "/recent",
+  index: false
+});
 
 export default function RecentSearchesPage() {
   return (

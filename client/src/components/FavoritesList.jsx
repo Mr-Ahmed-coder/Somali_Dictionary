@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BookOpen, Heart, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFavorites } from "@/hooks/useFavorites";
+import { getWordPath } from "@/lib/seo";
 
 export function FavoritesList() {
   const { favorites, ready, removeFavorite, clearFavorites } = useFavorites();
@@ -69,7 +70,7 @@ export function FavoritesList() {
       <div className="favoritesGrid">
         {favorites.map((word) => (
           <article className="favoriteCard" key={word._id}>
-            <Link className="favoriteCardLink" href={`/word/${word._id}`}>
+            <Link className="favoriteCardLink" href={getWordPath(word)}>
               <span className="favoriteType">{word.type || "word"}</span>
               <div>
                 <h3>{word.english || "Untitled word"}</h3>

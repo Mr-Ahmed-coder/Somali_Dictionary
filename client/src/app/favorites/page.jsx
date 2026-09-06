@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Heart, Languages } from "lucide-react";
 import { FavoritesList } from "@/components/FavoritesList";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Saved Words - English Somali Dictionary",
-  description: "View English and Somali dictionary words saved in your browser."
-};
+export const metadata = buildMetadata({
+  title: "Saved Dictionary Words",
+  description: "View English and Somali dictionary words saved in your browser.",
+  path: "/favorites",
+  index: false
+});
 
 export default function FavoritesPage() {
   return (
