@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { BookOpen, ChevronLeft, ChevronRight, Tag } from "lucide-react";
+import { BookOpen, Tag } from "lucide-react";
+import { PublicPagination } from "@/components/PublicPagination";
 import { getWordPath } from "@/lib/seo";
 
 export const ALPHABET = "abcdefghijklmnopqrstuvwxyz".split("");
@@ -75,33 +76,7 @@ export function WordDirectory({ items, pagination, activeLetter = "", basePath =
         </section>
       )}
 
-      {pagination.pages > 1 && (
-        <nav className="mt-8 flex items-center justify-between gap-4" aria-label="Dictionary pagination">
-          {pagination.page > 1 ? (
-            <Link className="ghostButton" href={pageHref(basePath, pagination.page - 1)} rel="prev">
-              <ChevronLeft size={17} aria-hidden="true" />
-              Previous
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="text-sm font-black text-muted">
-            Page {pagination.page} of {pagination.pages}
-          </span>
-          {pagination.page < pagination.pages ? (
-            <Link className="ghostButton" href={pageHref(basePath, pagination.page + 1)} rel="next">
-              Next
-              <ChevronRight size={17} aria-hidden="true" />
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      )}
+      <PublicPagination basePath={basePath} pagination={pagination} />
     </>
   );
-}
-
-function pageHref(basePath, page) {
-  return page <= 1 ? basePath : `${basePath}?page=${page}`;
 }

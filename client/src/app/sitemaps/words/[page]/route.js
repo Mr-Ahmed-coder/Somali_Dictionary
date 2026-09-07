@@ -1,4 +1,4 @@
-import { getSeoWords } from "@/lib/api";
+import { getSeoWords } from "@/lib/seoApi";
 import { getWordPath } from "@/lib/seo";
 import {
   renderUrlSet,
@@ -24,7 +24,7 @@ export async function GET(_request, { params }) {
   }
 
   const entries = (result.items || []).map((word) => ({
-    url: sitemapUrl(getWordPath(word)),
+    url: sitemapUrl(word.path || getWordPath(word)),
     lastModified: word.updatedAt
   }));
 

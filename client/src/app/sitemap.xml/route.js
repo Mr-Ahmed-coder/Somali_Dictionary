@@ -1,4 +1,4 @@
-import { getSeoWords } from "@/lib/api";
+import { getSeoWords } from "@/lib/seoApi";
 import {
   renderSitemapIndex,
   sitemapUrl,

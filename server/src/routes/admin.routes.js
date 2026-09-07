@@ -6,7 +6,7 @@ import {
   deleteCategory,
   updateCategory
 } from "../controllers/category.controller.js";
-import { createWord, deleteWord, putWord, updateWord } from "../controllers/word.controller.js";
+import { createWord, deleteWord, getAdminWord, putWord, updateWord } from "../controllers/word.controller.js";
 import {
   getMissingSearches,
   reopenMissingSearch,
@@ -55,6 +55,7 @@ router.post("/imports/preview", importUpload.single("file"), asyncHandler(previe
 router.post("/imports/commit", asyncHandler(commitImport));
 
 router.post("/words", asyncHandler(createWord));
+router.get("/words/:id", validateObjectId("id"), asyncHandler(getAdminWord));
 router.put("/words/:id", validateObjectId("id"), asyncHandler(putWord));
 router.patch("/words/:id", validateObjectId("id"), asyncHandler(updateWord));
 router.delete("/words/:id", validateObjectId("id"), asyncHandler(deleteWord));

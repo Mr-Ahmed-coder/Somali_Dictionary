@@ -26,7 +26,8 @@ const envSchema = z.object({
   MONGODB_QUERY_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(10000),
   AI_PROVIDER: z.string().default("disabled"),
-  AI_API_KEY: z.string().optional()
+  AI_API_KEY: z.string().optional(),
+  SEO_INDEX_TOKEN: z.string().min(32, "SEO_INDEX_TOKEN must be at least 32 characters").optional()
 });
 
 const parsedEnv = envSchema.parse(process.env);

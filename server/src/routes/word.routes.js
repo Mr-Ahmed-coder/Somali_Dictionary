@@ -15,6 +15,7 @@ import {
 } from "../controllers/word.controller.js";
 import { attachAdmin, requireAdmin } from "../middleware/adminAuth.js";
 import { searchLimiter, searchSuggestionsLimiter } from "../middleware/rateLimiters.js";
+import { requireSeoIndexToken } from "../middleware/seoIndexAuth.js";
 import { validateObjectId } from "../middleware/validateObjectId.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -24,7 +25,7 @@ router.get("/search", searchLimiter, asyncHandler(attachAdmin), asyncHandler(sea
 router.get("/suggestions", searchSuggestionsLimiter, asyncHandler(attachAdmin), asyncHandler(suggestions));
 router.get("/category/:category", asyncHandler(getWordsByCategory));
 router.get("/word-of-the-day", asyncHandler(getWordOfTheDay));
-router.get("/seo-index", asyncHandler(getSeoWords));
+router.get("/seo-index", requireSeoIndexToken, asyncHandler(getSeoWords));
 router.get("/lookup/:identifier", asyncHandler(getWordLookup));
 router.get("/", asyncHandler(attachAdmin), asyncHandler(getWords));
 router.post("/", requireAdmin, asyncHandler(createWord));

@@ -31,7 +31,7 @@ export default async function CategoriesPage() {
   const categories = normalizeCategories(result.items || []);
   const firstCategory = categories[0];
   const firstCategoryData = firstCategory
-    ? await getCategoryBySlug(firstCategory.slug).catch(() => ({ item: firstCategory, words: [] }))
+    ? await getCategoryBySlug(firstCategory.slug, { limit: 48 }).catch(() => ({ item: firstCategory, words: [] }))
     : null;
   const initialCategoryData = firstCategory ? { [firstCategory.slug]: firstCategoryData } : {};
 

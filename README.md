@@ -88,12 +88,15 @@ RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX=200
 AI_PROVIDER=disabled
 AI_API_KEY=
+SEO_INDEX_TOKEN=replace_with_a_random_server_only_token_at_least_32_characters
 ```
 
 Frontend (`client/.env.local`):
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SEO_INDEX_TOKEN=use_the_same_server_only_token_as_the_backend
 ```
 
 Never commit real `.env` files, database connection strings, API keys, passwords, or secrets.
@@ -165,9 +168,9 @@ npm run lint --prefix client
 - There is no public admin registration route.
 - Admin users are created with `npm run create-admin` using `ADMIN_EMAIL` and `ADMIN_PASSWORD` from environment variables.
 - Passwords are stored as bcrypt hashes only.
-- Admin login returns a JWT signed with `JWT_SECRET`.
-- Protected requests use `Authorization: Bearer <token>`.
-- Admin tokens are stored in browser `sessionStorage` and cleared on logout or expiry.
+- Admin login establishes a JWT session signed with `JWT_SECRET`.
+- The first-party web client authenticates with an HttpOnly session cookie; trusted non-browser clients may use `Authorization: Bearer <token>`.
+- Admin sessions are cleared on logout or expiry.
 - Admin-only routes protect create, update, delete, category management, and CSV/XLSX import.
 
 ## Deployment
@@ -205,6 +208,7 @@ MONGODB_QUERY_TIMEOUT_MS=10000
 SHUTDOWN_TIMEOUT_MS=10000
 AI_PROVIDER=disabled
 AI_API_KEY=
+SEO_INDEX_TOKEN=your_random_server_only_sitemap_token
 ```
 
 After setting Render environment variables, run the backend admin bootstrap once:
@@ -219,6 +223,8 @@ Set this environment variable in Vercel:
 
 ```env
 NEXT_PUBLIC_API_URL=https://your-render-service.onrender.com/api
+NEXT_PUBLIC_SITE_URL=https://www.somali-dictionary.com
+SEO_INDEX_TOKEN=the_same_server_only_sitemap_token_used_by_render
 ```
 
 Then deploy the `client` workspace.
@@ -226,6 +232,7 @@ Deployment notes:
 
 - `FRONTEND_URL` must be the exact Vercel frontend origin, for example `https://your-app.vercel.app`.
 - `NEXT_PUBLIC_API_URL` must be the Render backend API base URL ending in `/api`, for example `https://your-backend.onrender.com/api`.
+- `SEO_INDEX_TOKEN` must match in Render and Vercel. It is server-only and must never use a `NEXT_PUBLIC_` prefix.
 - Do not use localhost in Vercel or Render production environment variables.
 
 ## GitHub Safety Checklist

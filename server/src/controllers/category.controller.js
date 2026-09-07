@@ -1,7 +1,12 @@
 import { Category } from "../models/category.model.js";
 import { Word } from "../models/word.model.js";
 import { ApiError } from "../utils/apiError.js";
-import { categoryCreateSchema, categoryUpdateSchema } from "../validators/category.schema.js";
+import { toPublicCategoryDto, toPublicWordDtos } from "../serializers/publicWord.serializer.js";
+import {
+  categoryCreateSchema,
+  categoryUpdateSchema,
+  categoryWordListSchema
+} from "../validators/category.schema.js";
 
 const browseCategories = [
   "Education",
@@ -53,17 +58,23 @@ export async function getCategories(_req, res) {
   });
 
   const items = merged
-    .map((category) => ({
-      ...category,
-      description: category.description || categoryDescriptions[category.name] || "",
-      wordCount: category.virtual ? 0 : countByCategory.get(category._id.toString()) || 0
-    }))
+    .map((category) =>
+      toPublicCategoryDto(
+        {
+          ...category,
+          description: category.description || categoryDescriptions[category.name] || ""
+        },
+        { wordCount: category.virtual ? 0 : countByCategory.get(category._id.toString()) || 0 }
+      )
+    )
     .sort((a, b) => browseSort(a.name) - browseSort(b.name) || a.name.localeCompare(b.name));
 
   res.json({ items });
 }
 
 export async function getCategory(req, res, next) {
+  const paginationInput = categoryWordListSchema.parse(req.query);
+  const { page, limit } = paginationInput;
   const category = await Category.findOne({ slug: req.params.slug, isActive: true });
 
   if (!category) {
@@ -71,29 +82,47 @@ export async function getCategory(req, res, next) {
 
     if (virtualName) {
       return res.json({
-        item: {
+        item: toPublicCategoryDto({
           _id: `virtual-${req.params.slug}`,
           name: virtualName,
           slug: req.params.slug,
           description: categoryDescriptions[virtualName] || "",
           wordCount: 0,
           virtual: true
-        },
-        words: []
+        }),
+        words: [],
+        pagination: { page, limit, total: 0, pages: 0 }
       });
     }
 
     return next(new ApiError(404, "Category not found"));
   }
 
-  const words = await Word.find({
+  const query = {
     category: category._id,
     status: "published",
     "sync.isDeleted": false
-  })
-    .populate("category", "name slug")
-    .sort({ normalizedEnglish: 1 });
-  return res.json({ item: { ...category.toObject(), wordCount: words.length }, words });
+  };
+  const skip = (page - 1) * limit;
+  const [words, total] = await Promise.all([
+    Word.find(query)
+      .populate("category", "name slug")
+      .sort({ normalizedEnglish: 1, _id: 1 })
+      .skip(skip)
+      .limit(limit),
+    Word.countDocuments(query)
+  ]);
+
+  return res.json({
+    item: toPublicCategoryDto(category, { wordCount: total }),
+    words: toPublicWordDtos(words),
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  });
 }
 
 export async function createCategory(req, res) {

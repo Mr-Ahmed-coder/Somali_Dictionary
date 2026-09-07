@@ -2,6 +2,7 @@ import { Word } from "../models/word.model.js";
 import { Category } from "../models/category.model.js";
 import { ApiError } from "../utils/apiError.js";
 import { getDailyWordIndex } from "../utils/dailyWord.js";
+import { getCanonicalWordPath } from "../utils/wordPath.js";
 
 const directionFields = {
   "english-to-somali": "normalizedEnglish",
@@ -210,15 +211,26 @@ export async function getWordSuggestions({ q, limit = 8, includeDrafts = false }
     { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } }
   ]);
 
-  const suggestions = words.map((word) => ({
-    id: word._id,
-    type: "word",
-    label: `${word.englishWord} - ${word.somaliWord}`,
-    englishWord: word.englishWord,
-    somaliWord: word.somaliWord,
-    partOfSpeech: word.partOfSpeech,
-    category: word.category
-  }));
+  const suggestions = words.map((word) => {
+    const categoryId = word.category?._id ? String(word.category._id) : undefined;
+
+    return {
+      id: word._id,
+      type: "word",
+      label: `${word.englishWord} - ${word.somaliWord}`,
+      englishWord: word.englishWord,
+      somaliWord: word.somaliWord,
+      partOfSpeech: word.partOfSpeech,
+      category: word.category
+        ? {
+            _id: categoryId,
+            id: categoryId,
+            name: word.category.name,
+            slug: word.category.slug
+          }
+        : null
+    };
+  });
 
   return {
     success: true,
@@ -228,7 +240,7 @@ export async function getWordSuggestions({ q, limit = 8, includeDrafts = false }
   };
 }
 
-export async function listWordsByCategory(categoryValue) {
+export async function listWordsByCategory(categoryValue, { page = 1, limit = 50 } = {}) {
   const category = await Category.findOne({
     isActive: true,
     $or: [
@@ -241,27 +253,55 @@ export async function listWordsByCategory(categoryValue) {
     return {
       category: null,
       count: 0,
-      words: []
+      words: [],
+      pagination: { page: Number(page), limit: Number(limit), total: 0, pages: 0 }
     };
   }
 
-  const words = await Word.find({
+  const query = {
     category: category._id,
     status: "published",
     "sync.isDeleted": false
-  })
-    .populate("category", "name slug")
-    .sort({ normalizedEnglish: 1 });
+  };
+  const skip = (Number(page) - 1) * Number(limit);
+  const [words, total] = await Promise.all([
+    Word.find(query)
+      .populate("category", "name slug")
+      .sort({ normalizedEnglish: 1, _id: 1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    Word.countDocuments(query)
+  ]);
 
   return {
     category,
-    count: words.length,
-    words
+    count: total,
+    words,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      pages: Math.ceil(total / Number(limit))
+    }
   };
 }
 
 export async function getWordById(id) {
   const word = await Word.findOne({ _id: id, "sync.isDeleted": false }).populate("category", "name slug");
+
+  if (!word) {
+    throw new ApiError(404, "Word not found");
+  }
+
+  return word;
+}
+
+export async function getPublishedWordById(id) {
+  const word = await Word.findOne({
+    _id: id,
+    status: "published",
+    "sync.isDeleted": false
+  }).populate("category", "name slug");
 
   if (!word) {
     throw new ApiError(404, "Word not found");
@@ -309,10 +349,10 @@ export async function getPublishedWordByIdentifier(identifier) {
     .sort({ normalizedEnglish: 1, normalizedSomali: 1, _id: 1 });
 }
 
-export async function listSeoWords({ page = 1, limit = 10000 }) {
+export async function listSeoWords({ page = 1, limit = 1000 }) {
   const query = { status: "published", "sync.isDeleted": false };
   const skip = (Number(page) - 1) * Number(limit);
-  const [items, total] = await Promise.all([
+  const [words, total] = await Promise.all([
     Word.find(query)
       .select("_id englishWord somaliWord updatedAt")
       .sort({ normalizedEnglish: 1, _id: 1 })
@@ -323,7 +363,10 @@ export async function listSeoWords({ page = 1, limit = 10000 }) {
   ]);
 
   return {
-    items,
+    items: words.map((word) => ({
+      path: getCanonicalWordPath(word),
+      updatedAt: word.updatedAt
+    })),
     pagination: {
       page: Number(page),
       limit: Number(limit),

@@ -1,6 +1,6 @@
 import { SITE_URL } from "@/lib/seo";
 
-export const WORDS_PER_SITEMAP = 10000;
+export const WORDS_PER_SITEMAP = 1000;
 
 export function xmlResponse(xml, status = 200) {
   return new Response(xml, {

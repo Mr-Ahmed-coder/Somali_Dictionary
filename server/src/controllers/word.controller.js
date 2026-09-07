@@ -4,6 +4,7 @@ import {
   findWordOfTheDay,
   getWordSuggestions,
   getWordById,
+  getPublishedWordById,
   getPublishedWordByIdentifier,
   listSeoWords,
   listWordsByCategory,
@@ -22,6 +23,12 @@ import {
   wordOfTheDaySchema,
   wordUpdateSchema
 } from "../validators/word.schema.js";
+import {
+  toPublicCategoryDto,
+  toPublicWordDto,
+  toPublicWordDtos
+} from "../serializers/publicWord.serializer.js";
+import { categoryWordListSchema } from "../validators/category.schema.js";
 import { ApiError } from "../utils/apiError.js";
 
 export async function getWords(req, res) {
@@ -33,11 +40,12 @@ export async function getWords(req, res) {
   }
 
   const result = await listWords(query);
+  const items = isAdminRequest ? result.items : toPublicWordDtos(result.items);
   res.json({
     success: true,
-    count: result.items.length,
-    words: result.items,
-    items: result.items,
+    count: items.length,
+    words: items,
+    items,
     pagination: result.pagination
   });
 }
@@ -54,7 +62,10 @@ export async function search(req, res) {
   const query = searchSchema.parse(req.query);
   const isAdminRequest = req.admin?.role === "admin";
   const result = await searchWords({ ...query, includeDrafts: isAdminRequest });
-  res.json(result);
+  return res.json({
+    ...result,
+    items: isAdminRequest ? result.items : toPublicWordDtos(result.items)
+  });
 }
 
 export async function suggestions(req, res) {
@@ -65,6 +76,11 @@ export async function suggestions(req, res) {
 }
 
 export async function getWord(req, res) {
+  const word = await getPublishedWordById(req.params.id);
+  return res.json({ item: toPublicWordDto(word) });
+}
+
+export async function getAdminWord(req, res) {
   const word = await getWordById(req.params.id);
   return res.json({ item: word });
 }
@@ -78,25 +94,28 @@ export async function getWordLookup(req, res) {
   }
 
   res.set("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
-  return res.json({ item: word });
+  return res.json({ item: toPublicWordDto(word) });
 }
 
 export async function getSeoWords(req, res) {
   const query = seoWordListSchema.parse(req.query);
   const result = await listSeoWords(query);
 
-  res.set("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
+  res.set("Cache-Control", "private, no-store");
   return res.json({ success: true, items: result.items, pagination: result.pagination });
 }
 
 export async function getWordsByCategory(req, res) {
-  const result = await listWordsByCategory(req.params.category);
+  const pagination = categoryWordListSchema.parse(req.query);
+  const result = await listWordsByCategory(req.params.category, pagination);
+  const words = toPublicWordDtos(result.words);
   return res.json({
     success: true,
-    category: result.category,
+    category: result.category ? toPublicCategoryDto(result.category, { wordCount: result.count }) : null,
     count: result.count,
-    words: result.words,
-    items: result.words
+    words,
+    items: words,
+    pagination: result.pagination
   });
 }
 

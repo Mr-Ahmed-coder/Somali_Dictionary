@@ -3,7 +3,7 @@ services:
     name: english-somali-dictionary-api
     runtime: node
     rootDir: server
-    plan: free
+    plan: 0.5c-512mb
     buildCommand: npm --prefix .. ci --omit=dev --workspace dictionary-api
     startCommand: npm start
     healthCheckPath: /api/health
@@ -47,3 +47,5 @@ services:
         value: "10000"
       - key: AI_PROVIDER
         value: disabled
+      - key: SEO_INDEX_TOKEN
+        sync: false

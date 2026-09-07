@@ -80,7 +80,7 @@ export const wordListSchema = z.object({
 
 export const seoWordListSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(10000).default(10000)
+  limit: z.coerce.number().int().min(1).max(1000).default(1000)
 });
 
 export const wordLookupSchema = z.object({

@@ -73,8 +73,9 @@ export async function getCategories() {
   return apiFetch("/categories", { next: { revalidate: 60 } });
 }
 
-export async function getCategoryBySlug(slug, options = {}) {
-  return apiFetch(`/categories/${encodeURIComponent(slug)}`, {
+export async function getCategoryBySlug(slug, { page = 1, limit = 50, ...options } = {}) {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return apiFetch(`/categories/${encodeURIComponent(slug)}?${params.toString()}`, {
     next: { revalidate: 300 },
     ...options
   });
@@ -111,9 +112,4 @@ export async function getWordByIdentifier(identifier) {
     : `/words/lookup/${encodeURIComponent(identifier)}`;
   const result = await apiFetch(path, isObjectId ? { cache: "no-store" } : { next: { revalidate: 300 } });
   return result.item || result.word || result.data || result;
-}
-
-export async function getSeoWords({ page = 1, limit = 10000 } = {}) {
-  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-  return apiFetch(`/words/seo-index?${params.toString()}`, { next: { revalidate: 3600 } });
 }

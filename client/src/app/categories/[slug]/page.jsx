@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
+import { PublicPagination } from "@/components/PublicPagination";
 import { getCategoryBySlug } from "@/lib/api";
 import { absoluteUrl, buildMetadata, getWordPath } from "@/lib/seo";
 
-export async function generateMetadata({ params }) {
+const PAGE_SIZE = 48;
+
+export async function generateMetadata({ params, searchParams }) {
   const { slug } = await params;
-  const result = await getCategoryBySlug(slug).catch(() => null);
+  const { page } = await searchParams;
+  const pageNumber = parsePage(page);
+  const result = await getCategoryBySlug(slug, { page: 1, limit: 1 }).catch(() => null);
 
   if (!result?.item) {
     return { title: "Category Not Found", robots: { index: false, follow: false } };
@@ -14,23 +19,28 @@ export async function generateMetadata({ params }) {
 
   const count = Number(result.item.wordCount ?? result.words?.length ?? 0);
   return buildMetadata({
-    title: `${result.item.name} English–Somali Words`,
+    title: `${result.item.name} English–Somali Words${pageNumber > 1 ? `, Page ${pageNumber}` : ""}`,
     description:
       result.item.description ||
       `Browse ${count} ${result.item.name} words with English and Somali translations.`,
-    path: `/categories/${encodeURIComponent(result.item.slug)}`,
+    path: `/categories/${encodeURIComponent(result.item.slug)}${pageNumber > 1 ? `?page=${pageNumber}` : ""}`,
     index: count > 0
   });
 }
 
-export default async function CategoryDetailPage({ params }) {
+export default async function CategoryDetailPage({ params, searchParams }) {
   const { slug } = await params;
-  const result = await getCategoryBySlug(slug).catch((error) => {
+  const { page } = await searchParams;
+  const pageNumber = parsePage(page);
+  const result = await getCategoryBySlug(slug, { page: pageNumber, limit: PAGE_SIZE }).catch((error) => {
     if (error.status === 404) notFound();
     throw error;
   });
   if (!result.item) notFound();
-  const canonicalPath = `/categories/${encodeURIComponent(result.item.slug)}`;
+  const pagination = result.pagination || { page: pageNumber, pages: 1, total: result.words?.length || 0, limit: PAGE_SIZE };
+  if (pageNumber > 1 && pageNumber > pagination.pages) notFound();
+  const basePath = `/categories/${encodeURIComponent(result.item.slug)}`;
+  const canonicalPath = pageNumber > 1 ? `${basePath}?page=${pageNumber}` : basePath;
 
   return (
     <main className="pageShell">
@@ -41,6 +51,15 @@ export default async function CategoryDetailPage({ params }) {
           name: `${result.item.name} English–Somali Words`,
           description: result.item.description || `English and Somali words in ${result.item.name}.`,
           url: absoluteUrl(canonicalPath),
+          mainEntity: {
+            "@type": "ItemList",
+            itemListElement: (result.words || []).map((word, index) => ({
+              "@type": "ListItem",
+              position: (pageNumber - 1) * PAGE_SIZE + index + 1,
+              name: `${word.englishWord || word.english} - ${word.somaliWord || word.somali}`,
+              url: absoluteUrl(getWordPath(word))
+            }))
+          },
           breadcrumb: {
             "@type": "BreadcrumbList",
             itemListElement: [
@@ -54,7 +73,9 @@ export default async function CategoryDetailPage({ params }) {
       <header className="pageHeader">
         <Link href="/categories">← Categories</Link>
         <h1>{result.item?.name || "Category"}</h1>
-        <p>{result.item?.description || "Words in this category."}</p>
+        <p>
+          {result.item?.description || "Words in this category."} {pagination.total || 0} published words.
+        </p>
       </header>
 
       <section className="wordGrid">
@@ -84,6 +105,12 @@ export default async function CategoryDetailPage({ params }) {
           </article>
         ))}
       </section>
+      <PublicPagination basePath={basePath} pagination={pagination} />
     </main>
   );
+}
+
+function parsePage(value) {
+  const page = Number(value || 1);
+  return Number.isInteger(page) && page > 0 ? page : 1;
 }
