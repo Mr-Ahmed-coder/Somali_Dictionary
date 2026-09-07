@@ -13,6 +13,10 @@ const sortStrategies = {
   alphabetical: { normalizedEnglish: 1 },
   "english-asc": { normalizedEnglish: 1 },
   "english-desc": { normalizedEnglish: -1 },
+  "v1-english-asc": { normalizedEnglish: 1, normalizedSomali: 1, _id: 1 },
+  "v1-english-desc": { normalizedEnglish: -1, normalizedSomali: -1, _id: -1 },
+  "v1-newest": { createdAt: -1, _id: -1 },
+  "v1-oldest": { createdAt: 1, _id: 1 },
   popular: { "popularity.score": -1, normalizedEnglish: 1 },
   newest: { createdAt: -1 },
   oldest: { createdAt: 1 },
@@ -111,6 +115,7 @@ export async function searchWords({
   page = 1,
   limit,
   includeDrafts = false,
+  stableSort = false,
   category,
   status = "published",
   partOfSpeech,
@@ -161,7 +166,17 @@ export async function searchWords({
           }
         }
       },
-      { $sort: { searchRank: -1, "popularity.score": -1, normalizedEnglish: 1 } },
+      {
+        $sort: stableSort
+          ? {
+              searchRank: -1,
+              "popularity.score": -1,
+              normalizedEnglish: 1,
+              normalizedSomali: 1,
+              _id: 1
+            }
+          : { searchRank: -1, "popularity.score": -1, normalizedEnglish: 1 }
+      },
       { $skip: skip },
       { $limit: Number(limit) },
       {
@@ -347,6 +362,37 @@ export async function getPublishedWordByIdentifier(identifier) {
   return Word.findOne(query)
     .populate("category", "name slug")
     .sort({ normalizedEnglish: 1, normalizedSomali: 1, _id: 1 });
+}
+
+export async function listPublishedWordsByExactTerm(term, { page = 1, limit = 20 } = {}) {
+  const normalized = normalizeText(term);
+  const query = {
+    status: "published",
+    "sync.isDeleted": false,
+    $or: [
+      { normalizedEnglish: normalized },
+      { normalizedSomali: normalized }
+    ]
+  };
+  const skip = (Number(page) - 1) * Number(limit);
+  const [items, total] = await Promise.all([
+    Word.find(query)
+      .populate("category", "name slug")
+      .sort({ normalizedEnglish: 1, normalizedSomali: 1, _id: 1 })
+      .skip(skip)
+      .limit(Number(limit)),
+    Word.countDocuments(query)
+  ]);
+
+  return {
+    items,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      pages: Math.ceil(total / Number(limit))
+    }
+  };
 }
 
 export async function listSeoWords({ page = 1, limit = 1000 }) {

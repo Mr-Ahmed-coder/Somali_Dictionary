@@ -28,7 +28,9 @@ const fixtures = [
   wordFixture("777777777777777777777777", "public third", "saddexaad", "published", false),
   wordFixture("222222222222222222222222", "draft term", "erey qabyo", "draft", false),
   wordFixture("333333333333333333333333", "archived term", "erey kaydsan", "archived", false),
-  wordFixture("444444444444444444444444", "deleted term", "erey tirtiran", "published", true)
+  wordFixture("444444444444444444444444", "deleted term", "erey tirtiran", "published", true),
+  { ...wordFixture("888888888888888888888888", "shared term", "macne koowaad", "published", false), category: null },
+  { ...wordFixture("999999999999999999999999", "shared term", "macne labaad", "published", false), category: null }
 ];
 
 let server;
@@ -259,12 +261,107 @@ test("analytics and public suggestion workflows remain available", async () => {
   assert.equal(suggestion.status, 201);
 });
 
+test("v1 browse and bilingual search use the stable public envelope", async () => {
+  const entries = await request("/v1/entries?page=1&limit=2&sort=english_asc");
+  assert.equal(entries.status, 200);
+  assert.deepEqual(Object.keys(entries.body).sort(), ["data", "meta", "pagination", "success"]);
+  assert.equal(entries.body.data.length, 2);
+  assert.equal(entries.body.pagination.page, 1);
+  assert.equal(entries.body.pagination.limit, 2);
+  assert.ok(entries.body.pagination.total >= 5);
+  assert.equal(entries.body.meta.requestId, entries.response.headers.get("x-request-id"));
+  assertV1Entry(entries.body.data[0]);
+
+  for (const [query, language] of [["published", "en"], ["erey", "so"]]) {
+    const response = await request(`/v1/search?q=${query}&language=${language}&page=1&limit=5`);
+    assert.equal(response.status, 200);
+    assert.ok(response.body.data.length > 0);
+    assert.ok(response.body.data.every((entry) => fixtures.filter(isPublicWord).some((word) => word._id === entry.id)));
+    response.body.data.forEach(assertV1Entry);
+  }
+
+  assert.equal((await request("/v1/search?q=test&unknown=true")).status, 400);
+  assert.equal((await request("/v1/entries?limit=101")).status, 400);
+});
+
+test("v1 stable ID lookup hides every private state and rejects malformed IDs", async () => {
+  const published = await request(`/v1/entries/${fixtures[0]._id}`);
+  assert.equal(published.status, 200);
+  assert.equal(published.body.data.id, fixtures[0]._id);
+  assertV1Entry(published.body.data);
+
+  for (const id of [fixtures[3]._id, fixtures[4]._id, fixtures[5]._id, "555555555555555555555555"]) {
+    const response = await request(`/v1/entries/${id}`);
+    assert.equal(response.status, 404);
+    assert.equal(response.body.success, false);
+    assert.equal(response.body.error.code, "not_found");
+    assert.equal(Object.hasOwn(response.body.error, "details"), false);
+  }
+
+  const malformed = await request("/v1/entries/not-a-mongodb-id");
+  assert.equal(malformed.status, 400);
+  assert.equal(malformed.body.error.code, "invalid_request");
+});
+
+test("v1 exact-term lookup preserves ambiguous entries without exposing private matches", async () => {
+  const ambiguous = await request("/v1/terms/shared%20term/entries?page=1&limit=20");
+  assert.equal(ambiguous.status, 200);
+  assert.equal(ambiguous.body.pagination.total, 2);
+  assert.deepEqual(
+    ambiguous.body.data.map((entry) => entry.languages.somali).sort(),
+    ["macne koowaad", "macne labaad"].sort()
+  );
+  ambiguous.body.data.forEach(assertV1Entry);
+
+  for (const term of ["draft%20term", "archived%20term", "deleted%20term", "missing%20term"]) {
+    const response = await request(`/v1/terms/${term}/entries`);
+    assert.equal(response.status, 200);
+    assert.equal(response.body.pagination.total, 0);
+    assert.deepEqual(response.body.data, []);
+  }
+
+  assert.equal((await request("/v1/terms/shared%20term/entries?limit=51")).status, 400);
+});
+
+test("v1 categories are bounded, database-backed, and publication-scoped", async () => {
+  const categories = await request("/v1/categories?page=1&limit=50");
+  assert.equal(categories.status, 200);
+  assert.equal(categories.body.data.length, 1);
+  assert.equal(categories.body.data[0].slug, "test-category");
+  assert.equal(categories.body.data[0].wordCount, fixtures.filter(isPublicCategoryWord).length);
+  assert.equal(Object.hasOwn(categories.body.data[0], "__v"), false);
+
+  const category = await request("/v1/categories/test-category");
+  assert.equal(category.status, 200);
+  assert.equal(category.body.data.wordCount, fixtures.filter(isPublicCategoryWord).length);
+
+  const filteredEntries = await request("/v1/entries?category=test-category&page=1&limit=100");
+  assert.equal(filteredEntries.status, 200);
+  assert.equal(filteredEntries.body.pagination.total, fixtures.filter(isPublicCategoryWord).length);
+  filteredEntries.body.data.forEach(assertV1Entry);
+
+  assert.equal((await request("/v1/categories/unknown-category")).status, 404);
+  assert.equal((await request("/v1/categories?limit=101")).status, 400);
+
+  const unknownRoute = await request("/v1/not-a-route");
+  assert.equal(unknownRoute.status, 404);
+  assert.equal(unknownRoute.body.error.code, "not_found");
+});
+
 function installModelMocks() {
   mock.method(Word, "findOne", (query) => makeQuery(findWord(query), { preserveValue: true }));
   mock.method(Word, "find", (query) => makeQuery(fixtures.filter((word) => matches(word, query))));
   mock.method(Word, "countDocuments", async (query) => fixtures.filter((word) => matches(word, query)).length);
   mock.method(Word, "aggregate", async (pipeline = []) => {
     const matchStage = pipeline.find((stage) => stage.$match)?.$match || {};
+    if (pipeline.some((stage) => stage.$group)) {
+      const counts = new Map();
+      fixtures.filter((word) => matches(word, matchStage)).forEach((word) => {
+        const category = String(word.category?._id || word.category || "");
+        counts.set(category, (counts.get(category) || 0) + 1);
+      });
+      return [...counts.entries()].map(([_id, wordCount]) => ({ _id, wordCount }));
+    }
     const skip = pipeline.find((stage) => stage.$skip)?.$skip || 0;
     const limit = pipeline.find((stage) => stage.$limit)?.$limit;
     const results = fixtures.filter((word) => matches(word, matchStage)).slice(Number(skip));
@@ -281,8 +378,11 @@ function installModelMocks() {
     isActive: true,
     __v: 4
   };
-  mock.method(Category, "findOne", () => makeQuery(category));
+  mock.method(Category, "findOne", (query = {}) =>
+    makeQuery(query.slug && query.slug !== category.slug ? null : category)
+  );
   mock.method(Category, "find", () => makeQuery([category]));
+  mock.method(Category, "countDocuments", async () => 1);
 
   const admin = {
     _id: adminId,
@@ -381,10 +481,15 @@ function matches(word, query = {}) {
   if (query._id && String(query._id) !== word._id) return false;
   if (query.status && query.status !== word.status) return false;
   if (query["sync.isDeleted"] !== undefined && query["sync.isDeleted"] !== word.sync.isDeleted) return false;
-  if (query.category && String(query.category) !== String(word.category?._id)) return false;
+  if (query.category?.$in && !query.category.$in.map(String).includes(String(word.category?._id))) return false;
+  if (query.category && !query.category.$in && String(query.category) !== String(word.category?._id)) return false;
   if (query.partOfSpeech && query.partOfSpeech !== word.partOfSpeech) return false;
   if (query.letter && query.letter !== word.letter) return false;
+  if (typeof query.normalizedEnglish === "string" && query.normalizedEnglish !== word.normalizedEnglish) return false;
+  if (query.normalizedEnglish instanceof RegExp && !query.normalizedEnglish.test(word.normalizedEnglish)) return false;
   if (query.normalizedEnglish?.$in && !query.normalizedEnglish.$in.includes(word.normalizedEnglish)) return false;
+  if (typeof query.normalizedSomali === "string" && query.normalizedSomali !== word.normalizedSomali) return false;
+  if (query.normalizedSomali instanceof RegExp && !query.normalizedSomali.test(word.normalizedSomali)) return false;
   if (query.normalizedSomali?.$in && !query.normalizedSomali.$in.includes(word.normalizedSomali)) return false;
   if (query.$or && !query.$or.some((condition) => matches(word, condition))) return false;
   return true;
@@ -392,6 +497,39 @@ function matches(word, query = {}) {
 
 function isPublicWord(word) {
   return word.status === "published" && word.sync.isDeleted === false;
+}
+
+function isPublicCategoryWord(word) {
+  return isPublicWord(word) && String(word.category?._id) === categoryId;
+}
+
+function assertV1Entry(entry) {
+  for (const required of ["id", "languages", "partOfSpeech"]) {
+    assert.ok(Object.hasOwn(entry, required), `v1 entry missing ${required}`);
+  }
+  for (const key of Object.keys(entry)) {
+    assert.ok(
+      ["id", "languages", "partOfSpeech", "category", "definitions", "examples", "createdAt", "updatedAt"].includes(key),
+      `v1 entry exposed undocumented field ${key}`
+    );
+  }
+  assert.deepEqual(Object.keys(entry.languages).sort(), ["english", "somali"]);
+
+  const serialized = JSON.stringify(entry);
+  for (const forbidden of [
+    "__v",
+    "normalizedEnglish",
+    "normalizedSomali",
+    "sync",
+    "popularity",
+    "searchKeywords",
+    "source",
+    "aiTranslation",
+    "voiceTranslation",
+    "status"
+  ]) {
+    assert.equal(serialized.includes(`\"${forbidden}\"`), false, `v1 exposed ${forbidden}`);
+  }
 }
 
 function normalize(value) {

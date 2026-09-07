@@ -8,11 +8,14 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
 import { requestContext } from "./middleware/requestContext.js";
+import { v1ErrorHandler, v1NotFound } from "./middleware/v1ErrorHandler.js";
+import { v1ReadLimiter } from "./middleware/rateLimiters.js";
 import adminRoutes from "./routes/admin.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import suggestionRoutes from "./routes/suggestion.routes.js";
 import wordRoutes from "./routes/word.routes.js";
+import v1Routes from "./routes/v1.routes.js";
 import { ApiError } from "./utils/apiError.js";
 import { asyncHandler } from "./utils/asyncHandler.js";
 
@@ -102,6 +105,9 @@ export function createApp() {
     })
   );
 
+  app.use("/api/v1", v1ReadLimiter, v1Routes);
+  app.use("/api/v1", v1NotFound, v1ErrorHandler);
+
   app.use("/api/words", wordRoutes);
   app.use("/api/categories", categoryRoutes);
   app.use("/api/analytics", analyticsRoutes);
@@ -120,6 +126,7 @@ function skipGlobalRateLimit(req) {
     path === "/" ||
     path === "/api/health" ||
     path === "/api/admin/login" ||
+    path.startsWith("/api/v1") ||
     path.startsWith("/api/analytics/") ||
     path === "/api/suggestions" ||
     path === "/api/words/search" ||

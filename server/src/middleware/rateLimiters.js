@@ -64,3 +64,20 @@ export const searchSuggestionsLimiter = rateLimit({
     message: "Too many suggestion requests. Please wait a moment and try again."
   }
 });
+
+export const v1ReadLimiter = rateLimit({
+  standardHeaders: true,
+  legacyHeaders: false,
+  windowMs: 5 * 60 * 1000,
+  limit: 120,
+  handler(req, res, _next, options) {
+    return res.status(options.statusCode).json({
+      success: false,
+      error: {
+        code: "rate_limited",
+        message: "Too many API requests. Please wait a moment and try again."
+      },
+      meta: { requestId: req.id }
+    });
+  }
+});

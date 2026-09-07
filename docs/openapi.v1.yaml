@@ -1,0 +1,602 @@
+openapi: 3.1.0
+info:
+  title: English-Somali Dictionary API
+  version: 1.0.0
+  summary: Read-only access to published English-Somali dictionary entries
+  description: |
+    The v1 API exposes bounded, read-only access to published, non-deleted
+    dictionary records. Definitions, examples, and categories are omitted when
+    they are not recorded. The API does not assert linguistic verification,
+    provenance, ownership, or licensing rights for individual entries.
+  contact:
+    url: https://www.somali-dictionary.com
+servers:
+  - url: https://somali-dictionary.onrender.com/api/v1
+    description: Production
+  - url: http://localhost:5000/api/v1
+    description: Local development
+tags:
+  - name: Search
+  - name: Entries
+  - name: Categories
+paths:
+  /search:
+    get:
+      tags: [Search]
+      summary: Search published dictionary entries
+      description: Performs a ranked search in English, Somali, or both languages.
+      operationId: searchEntries
+      parameters:
+        - $ref: "#/components/parameters/SearchQuery"
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/SearchLimit"
+      responses:
+        "200":
+          description: A bounded page of matching entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntryCollectionResponse"
+              examples:
+                doctorSearch:
+                  summary: Multiple published matches
+                  value:
+                    success: true
+                    data:
+                      - id: 6a33e425f881968cca93dd19
+                        languages:
+                          english: doctor
+                          somali: dhakhtar
+                        partOfSpeech: noun
+                      - id: 6a357c210df4900ab2fe49cb
+                        languages:
+                          english: doctor
+                          somali: takhtar
+                        partOfSpeech: noun
+                    pagination:
+                      page: 1
+                      limit: 20
+                      total: 2
+                      totalPages: 1
+                      hasNextPage: false
+                      hasPreviousPage: false
+                    meta:
+                      requestId: 4b2f7e0d-1c8a-4f74-a8ef-2bfaa64bc290
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /entries:
+    get:
+      tags: [Entries]
+      summary: Browse published dictionary entries
+      operationId: listEntries
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/EntryLimit"
+        - name: letter
+          in: query
+          description: English initial letter.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2
+        - name: category
+          in: query
+          description: Active category slug.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 160
+            pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        - name: partOfSpeech
+          in: query
+          schema:
+            $ref: "#/components/schemas/PartOfSpeech"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [english_asc, english_desc, newest, oldest]
+            default: english_asc
+      responses:
+        "200":
+          description: A bounded page of entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntryCollectionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /entries/{id}:
+    get:
+      tags: [Entries]
+      summary: Retrieve one published entry by stable ID
+      operationId: getEntry
+      parameters:
+        - $ref: "#/components/parameters/EntryId"
+      responses:
+        "200":
+          description: Published dictionary entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntryResponse"
+              example:
+                success: true
+                data:
+                  id: 6a33e425f881968cca93dd19
+                  languages:
+                    english: doctor
+                    somali: dhakhtar
+                  partOfSpeech: noun
+                meta:
+                  requestId: 6d942930-61bc-486c-bcaf-34b769f8dd26
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /terms/{term}/entries:
+    get:
+      tags: [Entries]
+      summary: Retrieve every exact entry for an English or Somali term
+      description: |
+        Returns all exact normalized matches as separate entries. An unknown term
+        returns an empty collection rather than selecting or inventing a result.
+      operationId: listEntriesForTerm
+      parameters:
+        - name: term
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 160
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/SearchLimit"
+      responses:
+        "200":
+          description: Exact English or Somali matches
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntryCollectionResponse"
+              example:
+                success: true
+                data:
+                  - id: 6a33e425f881968cca93dd19
+                    languages:
+                      english: doctor
+                      somali: dhakhtar
+                    partOfSpeech: noun
+                  - id: 6a357c210df4900ab2fe49cb
+                    languages:
+                      english: doctor
+                      somali: takhtar
+                    partOfSpeech: noun
+                pagination:
+                  page: 1
+                  limit: 20
+                  total: 2
+                  totalPages: 1
+                  hasNextPage: false
+                  hasPreviousPage: false
+                meta:
+                  requestId: 8989d392-2a8b-4ea4-8484-f04fd9072b74
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /categories:
+    get:
+      tags: [Categories]
+      summary: List active categories
+      operationId: listCategories
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/CategoryLimit"
+      responses:
+        "200":
+          description: Active categories with published entry counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryCollectionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /categories/{slug}:
+    get:
+      tags: [Categories]
+      summary: Retrieve one active category
+      operationId: getCategory
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 160
+            pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      responses:
+        "200":
+          description: Active category metadata and published entry count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+components:
+  parameters:
+    SearchQuery:
+      name: q
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 160
+    Language:
+      name: language
+      in: query
+      schema:
+        type: string
+        enum: [auto, en, so]
+        default: auto
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    SearchLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    EntryLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    CategoryLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    EntryId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[0-9a-fA-F]{24}$"
+  schemas:
+    PartOfSpeech:
+      type: string
+      enum:
+        - noun
+        - verb
+        - adjective
+        - adverb
+        - preposition
+        - pronoun
+        - conjunction
+        - interjection
+        - phrase
+        - other
+    LanguagePair:
+      type: object
+      additionalProperties: false
+      required: [english, somali]
+      properties:
+        english:
+          type: string
+          maxLength: 160
+        somali:
+          type: string
+          maxLength: 160
+    BilingualText:
+      type: object
+      additionalProperties: false
+      properties:
+        english:
+          type: string
+        somali:
+          type: string
+      minProperties: 1
+    Category:
+      type: object
+      additionalProperties: false
+      required: [id, name, slug, wordCount]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        wordCount:
+          type: integer
+          minimum: 0
+    EntryCategory:
+      type: object
+      additionalProperties: false
+      required: [id, name, slug]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+    Entry:
+      type: object
+      additionalProperties: false
+      required: [id, languages]
+      properties:
+        id:
+          type: string
+          pattern: "^[0-9a-fA-F]{24}$"
+        languages:
+          $ref: "#/components/schemas/LanguagePair"
+        partOfSpeech:
+          $ref: "#/components/schemas/PartOfSpeech"
+        category:
+          $ref: "#/components/schemas/EntryCategory"
+        definitions:
+          $ref: "#/components/schemas/BilingualText"
+        examples:
+          type: array
+          maxItems: 1
+          items:
+            $ref: "#/components/schemas/BilingualText"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Pagination:
+      type: object
+      additionalProperties: false
+      required: [page, limit, total, totalPages, hasNextPage, hasPreviousPage]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+    Meta:
+      type: object
+      additionalProperties: false
+      required: [requestId]
+      properties:
+        requestId:
+          type: string
+    EntryResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/Entry"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    EntryCollectionResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, pagination, meta]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entry"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    CategoryResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          $ref: "#/components/schemas/Category"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    CategoryCollectionResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, pagination, meta]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [invalid_request, forbidden, not_found, rate_limited, internal_error, service_unavailable]
+        message:
+          type: string
+        details:
+          type: object
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [success, error, meta]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          $ref: "#/components/schemas/Error"
+        meta:
+          $ref: "#/components/schemas/Meta"
+  responses:
+    BadRequest:
+      description: Request parameters are malformed or outside documented bounds
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: invalid_request
+              message: Validation failed
+            meta:
+              requestId: 09642f92-4351-43b2-b282-e2677c219df6
+    NotFound:
+      description: The published resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: not_found
+              message: Dictionary entry not found
+            meta:
+              requestId: d19c7868-a689-489e-987c-12766c463939
+    Forbidden:
+      description: The browser origin is not permitted by the production CORS policy
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: forbidden
+              message: Request origin is not allowed
+            meta:
+              requestId: eda69263-ea60-4076-b1bf-bdf2414f194b
+    RateLimited:
+      description: The client exceeded the anonymous v1 read limit
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: An unexpected server error occurred
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            success: false
+            error:
+              code: internal_error
+              message: Internal server error
+            meta:
+              requestId: b5d230b9-91d3-4565-91c4-fc38f44575a4
+    ServiceUnavailable:
+      description: The database or API is temporarily unavailable
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

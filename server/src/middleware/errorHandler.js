@@ -73,7 +73,7 @@ export function errorHandler(error, req, res, next) {
   });
 }
 
-function isTransientDatabaseError(error) {
+export function isTransientDatabaseError(error) {
   const transientNames = new Set([
     "MongoNetworkError",
     "MongoNetworkTimeoutError",
