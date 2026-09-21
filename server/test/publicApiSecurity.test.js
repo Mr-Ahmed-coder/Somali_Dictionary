@@ -61,6 +61,19 @@ test("public ID lookup returns published words and hides every unavailable state
   }
 });
 
+test("API origin blocks crawlers and marks API responses as non-indexable", async () => {
+  const origin = baseUrl.replace(/\/api$/, "");
+  const robotsResponse = await fetch(`${origin}/robots.txt`);
+
+  assert.equal(robotsResponse.status, 200);
+  assert.match(robotsResponse.headers.get("content-type") || "", /^text\/plain/);
+  assert.equal(await robotsResponse.text(), "User-agent: *\nDisallow: /\n");
+
+  const apiResponse = await request("/v1/entries?page=1&limit=1");
+  assert.equal(apiResponse.status, 200);
+  assert.equal(apiResponse.response.headers.get("x-robots-tag"), "noindex, nofollow, noarchive");
+});
+
 test("public aliases resolve published words and hide draft, archived, and deleted aliases", async () => {
   for (const identifier of ["published-term", "erey-la-daabacay"]) {
     const response = await request(`/words/lookup/${identifier}`);
